@@ -11,6 +11,7 @@ import { ParticipantJoin } from "@/components/participant-join";
 import { ReceiptUpload } from "@/components/receipt-upload";
 import { ProcessingState } from "@/components/processing-state";
 import { ItemList } from "@/components/item-list";
+import { PreSettleSheet } from "@/components/pre-settle-sheet";
 import type { Selection } from "@/hooks/use-table-data";
 
 export default function TablePage({
@@ -23,7 +24,7 @@ export default function TablePage({
   const { data, error, loading, refresh } = useTableData(shareCode);
   const { session, saveSession } = useSession(data?.table?.id ?? null);
   const [localSelections, setLocalSelections] = useState<Selection[] | null>(null);
-  const [settling, setSettling] = useState(false);
+  const [showSettle, setShowSettle] = useState(false);
 
   if (loading) {
     return (
@@ -45,21 +46,8 @@ export default function TablePage({
   const activeSelections = localSelections ?? selections;
   const isHost = participants[0]?.id === session?.participantId;
 
-  async function handleSettle() {
-    setSettling(true);
-    try {
-      const res = await fetch("/api/ledger/compute", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tableId: table.id }),
-      });
-      if (!res.ok) throw new Error("Failed");
-      router.push(`/t/${shareCode}/settle`);
-    } catch {
-      toast.error("Couldn't settle up, try again");
-      setSettling(false);
-    }
-  }
+  // Bill total from items (for the mismatch warning in the pre-settle sheet)
+  const billTotal = items.reduce((sum, i) => sum + parseFloat(i.totalPrice ?? "0"), 0);
 
   function handleShare() {
     const url = `${window.location.origin}/t/${shareCode}`;
@@ -169,14 +157,24 @@ export default function TablePage({
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0F0F0F]/90 backdrop-blur-sm border-t border-zinc-800">
           <div className="max-w-lg mx-auto">
             <button
-              onClick={handleSettle}
-              disabled={settling}
-              className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-60"
+              onClick={() => setShowSettle(true)}
+              className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all"
             >
-              {settling ? <Loader2 size={20} className="animate-spin" /> : "Settle up →"}
+              Settle up →
             </button>
           </div>
         </div>
+      )}
+
+      {/* Pre-settle sheet */}
+      {showSettle && (
+        <PreSettleSheet
+          tableId={table.id}
+          participants={participants}
+          billTotal={billTotal}
+          onSettled={() => router.push(`/t/${shareCode}/settle`)}
+          onClose={() => setShowSettle(false)}
+        />
       )}
 
       {/* Join modal */}
