@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import type { Item, Participant, SplitTable, LedgerEntry } from "@/lib/db/schema";
+import type { Item, Participant, SplitTable, LedgerEntry, Payment } from "@/lib/db/schema";
 
 export interface Selection {
   participantId: string;
@@ -13,6 +13,7 @@ export interface TableData {
   items: Item[];
   participants: Participant[];
   selections: Selection[];
+  payments: Payment[];
   ledger: LedgerEntry[];
 }
 

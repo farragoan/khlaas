@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
-import { splitTables, items, participants, selections, ledgerEntries } from "@/lib/db/schema";
+import { splitTables, items, participants, selections, ledgerEntries, payments } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 export async function GET(
@@ -24,47 +24,26 @@ export async function GET(
     db.select().from(participants).where(eq(participants.tableId, table.id)),
   ]);
 
-  const tableSelections =
+  const [tableSelections, tablePayments, tableLedger] = await Promise.all([
     tableItems.length > 0
-      ? await db
-          .select()
+      ? db
+          .select({ id: selections.id, participantId: selections.participantId, itemId: selections.itemId })
           .from(selections)
-          .where(
-            eq(
-              selections.itemId,
-              // Fetch all selections for any item in this table
-              // We do a simple approach: get all selections then filter client-side is fine for MVP
-              // but we query by all item ids via a subquery
-              selections.itemId // placeholder — see below
-            )
-          )
-          .then(() =>
-            // Simpler: just fetch all selections for the participants in this table
-            db
-              .select({
-                id: selections.id,
-                participantId: selections.participantId,
-                itemId: selections.itemId,
-              })
-              .from(selections)
-              .innerJoin(items, eq(selections.itemId, items.id))
-              .where(eq(items.tableId, table.id))
-          )
-      : [];
-
-  const tableLedger =
+          .innerJoin(items, eq(selections.itemId, items.id))
+          .where(eq(items.tableId, table.id))
+      : Promise.resolve([]),
+    db.select().from(payments).where(eq(payments.tableId, table.id)),
     table.status === "settled"
-      ? await db
-          .select()
-          .from(ledgerEntries)
-          .where(eq(ledgerEntries.tableId, table.id))
-      : [];
+      ? db.select().from(ledgerEntries).where(eq(ledgerEntries.tableId, table.id))
+      : Promise.resolve([]),
+  ]);
 
   return NextResponse.json({
     table,
     items: tableItems,
     participants: tableParticipants,
     selections: tableSelections,
+    payments: tablePayments,
     ledger: tableLedger,
   });
 }
