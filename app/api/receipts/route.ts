@@ -22,17 +22,17 @@ interface OcrResult {
   total: number | null;
 }
 
-const OCR_PROMPT = `Extract all line items from this receipt image. Return JSON only, no other text:
-{
-  "items": [{"name": string, "quantity": number, "unit_price": number}],
-  "tax": number | null,
-  "service_charge": number | null,
-  "other_fees": [{"name": string, "amount": number}],
-  "total": number | null
-}`;
+const OCR_PROMPT = `You are a receipt OCR assistant. Extract all line items from this receipt image.
+
+IMPORTANT: Your entire response must be a single valid JSON object with no other text, no markdown, no code fences, no explanation.
+
+Return exactly this structure (use null for missing numeric fields, empty array for missing arrays):
+{"items":[{"name":"Item Name","quantity":1,"unit_price":9.99}],"tax":1.50,"service_charge":null,"other_fees":[{"name":"Delivery","amount":2.00}],"total":13.49}`;
 
 function parseOcrJson(content: string): OcrResult {
-  const jsonMatch = content.match(/\{[\s\S]*\}/);
+  // Strip markdown code fences if present
+  const stripped = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+  const jsonMatch = stripped.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("No JSON found in OCR response");
   return JSON.parse(jsonMatch[0]) as OcrResult;
 }
@@ -49,6 +49,7 @@ async function extractViaOpenRouter(imageBase64: string): Promise<OcrResult> {
     },
     body: JSON.stringify({
       model: "google/gemma-3-27b-it:free",
+      response_format: { type: "json_object" },
       messages: [
         {
           role: "user",
@@ -89,6 +90,7 @@ async function extractViaGoogleAI(imageBase64: string): Promise<OcrResult> {
           ],
         },
       ],
+      generationConfig: { responseMimeType: "application/json" },
     }),
   });
 
