@@ -14,6 +14,11 @@ export interface LedgerSelection {
   itemId: string;
 }
 
+export interface LedgerPayment {
+  participantId: string;
+  amount: number;
+}
+
 export interface LedgerResult {
   fromParticipant: string;
   toParticipant: string;
