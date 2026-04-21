@@ -23,6 +23,13 @@ export const ProcessReceiptSchema = z.object({
   imageBase64: z.string().min(1),
 });
 
+export const PaymentSchema = z.object({
+  tableId: z.string().uuid(),
+  participantId: z.string().uuid(),
+  amount: z.number().nonnegative(),
+});
+
 export const ComputeLedgerSchema = z.object({
   tableId: z.string().uuid(),
+  tip: z.number().nonnegative().default(0),
 });
