@@ -1,6 +1,8 @@
 import { z } from "zod";
 
-export const CreateTableSchema = z.object({});
+export const CreateTableSchema = z.object({
+  currency: z.string().length(3).default("INR"),
+});
 
 export const JoinParticipantSchema = z.object({
   tableId: z.string().uuid(),

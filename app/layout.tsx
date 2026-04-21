@@ -9,13 +9,26 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "khlaas — Split bills, not friendships",
+  title: "खल्लास — Split bills, not friendships",
   description: "Scan a receipt, tap what you ate, settle up instantly.",
   manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "खल्लास",
+  },
+  icons: {
+    apple: "/icons/icon-192.svg",
+    icon: "/icons/icon-512.svg",
+  },
 };
 
 export const viewport: Viewport = {
   themeColor: "#0F0F0F",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

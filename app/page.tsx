@@ -5,6 +5,25 @@ import { useRouter } from "next/navigation";
 import { Camera, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 
+const LOCALE_CURRENCY: Record<string, string> = {
+  "en-IN": "INR", "hi-IN": "INR", "hi": "INR",
+  "en-US": "USD", "en-CA": "CAD",
+  "en-GB": "GBP",
+  "en-AU": "AUD", "en-NZ": "NZD",
+  "en-SG": "SGD", "zh-SG": "SGD",
+  "en-AE": "AED", "ar-AE": "AED",
+  "ja": "JPY", "ja-JP": "JPY",
+  "zh-CN": "CNY", "zh": "CNY",
+  "ko": "KRW", "ko-KR": "KRW",
+  "fr": "EUR", "de": "EUR", "es": "EUR", "it": "EUR", "nl": "EUR", "pt-PT": "EUR",
+  "pt-BR": "BRL",
+};
+
+function detectCurrency(): string {
+  const lang = typeof navigator !== "undefined" ? navigator.language : "en-IN";
+  return LOCALE_CURRENCY[lang] ?? LOCALE_CURRENCY[lang.split("-")[0]] ?? "INR";
+}
+
 export default function Home() {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
@@ -12,7 +31,12 @@ export default function Home() {
   async function handleStart() {
     setCreating(true);
     try {
-      const res = await fetch("/api/tables", { method: "POST" });
+      const currency = detectCurrency();
+      const res = await fetch("/api/tables", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currency }),
+      });
       const { shareCode } = await res.json();
       router.push(`/t/${shareCode}`);
     } catch {

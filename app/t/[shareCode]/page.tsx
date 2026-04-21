@@ -12,6 +12,7 @@ import { ReceiptUpload } from "@/components/receipt-upload";
 import { ProcessingState } from "@/components/processing-state";
 import { ItemList } from "@/components/item-list";
 import { PreSettleSheet } from "@/components/pre-settle-sheet";
+import { CurrencyProvider } from "@/lib/currency-context";
 import type { Selection } from "@/hooks/use-table-data";
 
 export default function TablePage({
@@ -65,6 +66,7 @@ export default function TablePage({
   }
 
   return (
+    <CurrencyProvider value={table.currency ?? "INR"}>
     <main className="min-h-dvh bg-[#0F0F0F] flex flex-col max-w-lg mx-auto px-4 pb-32">
       {/* Header */}
       <div className="flex items-center justify-between py-5">
@@ -188,5 +190,6 @@ export default function TablePage({
         />
       )}
     </main>
+    </CurrencyProvider>
   );
 }

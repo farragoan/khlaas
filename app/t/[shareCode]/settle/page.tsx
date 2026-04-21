@@ -7,6 +7,7 @@ import { Share2, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import { useTableData } from "@/hooks/use-table-data";
 import { Price } from "@/components/price";
+import { CurrencyProvider } from "@/lib/currency-context";
 import type { Participant, LedgerEntry, Payment, Item } from "@/lib/db/schema";
 import type { Selection } from "@/hooks/use-table-data";
 
@@ -218,7 +219,7 @@ export default function SettlePage({
     const lines = ledger
       .map(
         (e) =>
-          `${participantName(e.fromParticipant, participants)} pays ${participantName(e.toParticipant, participants)} ₹${parseFloat(e.amount).toFixed(2)}`
+          `${participantName(e.fromParticipant, participants)} pays ${participantName(e.toParticipant, participants)} ${new Intl.NumberFormat(undefined, { style: "currency", currency: table.currency ?? "INR" }).format(parseFloat(e.amount))}`
       )
       .join("\n");
     const text = `Bill settled via khlaas:\n${lines}`;
@@ -231,6 +232,7 @@ export default function SettlePage({
   }
 
   return (
+    <CurrencyProvider value={table.currency ?? "INR"}>
     <>
       <main className="min-h-dvh bg-[#0F0F0F] flex flex-col max-w-lg mx-auto px-4 pb-16">
         {/* Header */}
@@ -344,5 +346,6 @@ export default function SettlePage({
         )}
       </AnimatePresence>
     </>
+    </CurrencyProvider>
   );
 }

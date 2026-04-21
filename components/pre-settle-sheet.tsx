@@ -6,6 +6,7 @@ import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import type { Participant } from "@/lib/db/schema";
 import { Price } from "@/components/price";
+import { useCurrency, getCurrencySymbol } from "@/lib/currency-context";
 
 interface Props {
   tableId: string;
@@ -16,6 +17,9 @@ interface Props {
 }
 
 export function PreSettleSheet({ tableId, participants, billTotal, onSettled, onClose }: Props) {
+  const currency = useCurrency();
+  const currencySymbol = getCurrencySymbol(currency);
+
   const [amounts, setAmounts] = useState<Record<string, string>>(() =>
     Object.fromEntries(participants.map((p) => [p.id, ""]))
   );
@@ -106,7 +110,7 @@ export function PreSettleSheet({ tableId, participants, billTotal, onSettled, on
               </div>
               <span className="text-zinc-200 text-sm flex-1">{p.displayName}</span>
               <div className="flex items-center gap-1 bg-[var(--surface)] rounded-xl px-3 py-2">
-                <span className="text-zinc-400 text-sm">₹</span>
+                <span className="text-zinc-400 text-sm">{currencySymbol}</span>
                 <input
                   type="number"
                   inputMode="decimal"
@@ -124,7 +128,7 @@ export function PreSettleSheet({ tableId, participants, billTotal, onSettled, on
         <div className="flex items-center gap-3 mb-5 pt-3 border-t border-zinc-800">
           <span className="text-zinc-400 text-sm flex-1">Tip</span>
           <div className="flex items-center gap-1 bg-[var(--surface)] rounded-xl px-3 py-2">
-            <span className="text-zinc-400 text-sm">₹</span>
+            <span className="text-zinc-400 text-sm">{currencySymbol}</span>
             <input
               type="number"
               inputMode="decimal"

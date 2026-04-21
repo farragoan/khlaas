@@ -26,6 +26,7 @@ export const splitTables = pgTable(
     receiptUrl: text("receipt_url"),
     rawOcr: text("raw_ocr"), // JSONB stored as text for simplicity
     tip: numeric("tip", { precision: 10, scale: 2 }).default("0"),
+    currency: text("currency").notNull().default("INR"),
   },
   (t) => [
     uniqueIndex("idx_split_tables_share_code").on(t.shareCode),
