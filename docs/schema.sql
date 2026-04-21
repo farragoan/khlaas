@@ -18,7 +18,8 @@ CREATE TABLE split_tables (
   status      TEXT NOT NULL DEFAULT 'active'
     CHECK (status IN ('active', 'items_ready', 'settled', 'expired')),
   receipt_url TEXT,                        -- Cloudflare R2 object key
-  raw_ocr     JSONB                        -- cached OCR response (for debugging / re-parsing)
+  raw_ocr     JSONB,                       -- cached OCR response (for debugging / re-parsing)
+  tip         NUMERIC(10,2) DEFAULT 0      -- manually entered tip, distributed proportionally
 );
 
 -- Line items extracted from receipt
@@ -64,6 +65,16 @@ CREATE TABLE ledger_entries (
   created_at       TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Who paid the restaurant bill and how much (one row per payer per table)
+CREATE TABLE payments (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  table_id       UUID NOT NULL REFERENCES split_tables(id) ON DELETE CASCADE,
+  participant_id UUID NOT NULL REFERENCES participants(id) ON DELETE CASCADE,
+  amount         NUMERIC(10,2) NOT NULL CHECK (amount >= 0),
+  created_at     TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(table_id, participant_id)
+);
+
 -- User accounts (V2 — created by Lucia Auth)
 -- Included here so the schema is complete; NOT used in V1.
 CREATE TABLE users (
@@ -91,6 +102,7 @@ CREATE INDEX idx_selections_item         ON selections(item_id);
 CREATE INDEX idx_ledger_table            ON ledger_entries(table_id);
 CREATE INDEX idx_ledger_from             ON ledger_entries(from_participant);
 CREATE INDEX idx_split_tables_share_code ON split_tables(share_code);
+CREATE INDEX idx_payments_table           ON payments(table_id);
 
 -- ============================================================
 -- ELECTRICSQL REPLICA IDENTITY
@@ -102,6 +114,7 @@ ALTER TABLE items           REPLICA IDENTITY FULL;
 ALTER TABLE participants    REPLICA IDENTITY FULL;
 ALTER TABLE selections      REPLICA IDENTITY FULL;
 ALTER TABLE ledger_entries  REPLICA IDENTITY FULL;
+ALTER TABLE payments        REPLICA IDENTITY FULL;
 
 -- ============================================================
 -- ROW LEVEL SECURITY

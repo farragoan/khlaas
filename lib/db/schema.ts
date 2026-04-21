@@ -25,6 +25,7 @@ export const splitTables = pgTable(
       .$type<"active" | "items_ready" | "settled" | "expired">(),
     receiptUrl: text("receipt_url"),
     rawOcr: text("raw_ocr"), // JSONB stored as text for simplicity
+    tip: numeric("tip", { precision: 10, scale: 2 }).default("0"),
   },
   (t) => [
     uniqueIndex("idx_split_tables_share_code").on(t.shareCode),
@@ -115,8 +116,28 @@ export const ledgerEntries = pgTable(
   ]
 );
 
+export const payments = pgTable(
+  "payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tableId: uuid("table_id")
+      .notNull()
+      .references(() => splitTables.id, { onDelete: "cascade" }),
+    participantId: uuid("participant_id")
+      .notNull()
+      .references(() => participants.id, { onDelete: "cascade" }),
+    amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("payments_table_participant_unique").on(t.tableId, t.participantId),
+    index("idx_payments_table").on(t.tableId),
+  ]
+);
+
 export type SplitTable = typeof splitTables.$inferSelect;
 export type Item = typeof items.$inferSelect;
 export type Participant = typeof participants.$inferSelect;
 export type Selection = typeof selections.$inferSelect;
 export type LedgerEntry = typeof ledgerEntries.$inferSelect;
+export type Payment = typeof payments.$inferSelect;
