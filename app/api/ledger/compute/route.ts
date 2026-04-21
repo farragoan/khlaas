@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
-import { splitTables, items, participants, selections, ledgerEntries } from "@/lib/db/schema";
+import { splitTables, items, participants, selections, ledgerEntries, payments } from "@/lib/db/schema";
 import { ComputeLedgerSchema } from "@/lib/schemas";
 import { eq } from "drizzle-orm";
 import { computeLedger } from "@/lib/ledger/compute";
@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { tableId } = parsed.data;
+  const { tableId, tip } = parsed.data;
 
   const [table] = await db
     .select()
@@ -24,9 +24,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Table not found" }, { status: 404 });
   }
 
-  const [tableItems, tableParticipants] = await Promise.all([
+  const [tableItems, tableParticipants, tablePayments] = await Promise.all([
     db.select().from(items).where(eq(items.tableId, tableId)),
     db.select().from(participants).where(eq(participants.tableId, tableId)),
+    db.select().from(payments).where(eq(payments.tableId, tableId)),
   ]);
 
   const tableSelections =
@@ -49,7 +50,18 @@ export async function POST(req: Request) {
     displayName: p.displayName,
   }));
 
-  const results = computeLedger(ledgerItems, ledgerParticipants, tableSelections);
+  const ledgerPayments = tablePayments.map((p) => ({
+    participantId: p.participantId,
+    amount: parseFloat(p.amount),
+  }));
+
+  const results = computeLedger(ledgerItems, ledgerParticipants, tableSelections, ledgerPayments, tip);
+
+  // Save tip and mark table settled
+  await db
+    .update(splitTables)
+    .set({ status: "settled", tip: String(tip) })
+    .where(eq(splitTables.id, tableId));
 
   if (results.length > 0) {
     await db.insert(ledgerEntries).values(
@@ -61,11 +73,6 @@ export async function POST(req: Request) {
       }))
     );
   }
-
-  await db
-    .update(splitTables)
-    .set({ status: "settled" })
-    .where(eq(splitTables.id, tableId));
 
   return NextResponse.json({ ok: true, entries: results });
 }
