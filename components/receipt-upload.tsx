@@ -36,8 +36,14 @@ export function ReceiptUpload({ tableId, onProcessed }: ReceiptUploadProps) {
       });
 
       if (!res.ok) {
-        const { error } = await res.json();
-        throw new Error(error ?? "Upload failed");
+        let message = "Upload failed";
+        try {
+          const body = await res.json();
+          message = body.error ?? message;
+        } catch {
+          // server returned non-JSON (e.g. plain-text 500)
+        }
+        throw new Error(message);
       }
 
       onProcessed();

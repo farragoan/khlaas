@@ -121,12 +121,19 @@ export async function POST(req: Request) {
 
   const { tableId, imageBase64 } = parsed.data;
 
-  // Verify table exists
-  const [table] = await db
-    .select({ id: splitTables.id })
-    .from(splitTables)
-    .where(eq(splitTables.id, tableId))
-    .limit(1);
+  let table: { id: string } | undefined;
+  try {
+    [table] = await db
+      .select({ id: splitTables.id })
+      .from(splitTables)
+      .where(eq(splitTables.id, tableId))
+      .limit(1);
+  } catch (err) {
+    return NextResponse.json(
+      { error: `Database error: ${err instanceof Error ? err.message : "unknown error"}` },
+      { status: 500 }
+    );
+  }
 
   if (!table) {
     return NextResponse.json({ error: "Table not found" }, { status: 404 });
@@ -165,12 +172,18 @@ export async function POST(req: Request) {
     }
   }
 
-  await db.insert(items).values(itemRows);
-
-  await db
-    .update(splitTables)
-    .set({ status: "items_ready" })
-    .where(eq(splitTables.id, tableId));
+  try {
+    await db.insert(items).values(itemRows);
+    await db
+      .update(splitTables)
+      .set({ status: "items_ready" })
+      .where(eq(splitTables.id, tableId));
+  } catch (err) {
+    return NextResponse.json(
+      { error: `Database error: ${err instanceof Error ? err.message : "unknown error"}` },
+      { status: 500 }
+    );
+  }
 
   return NextResponse.json({ ok: true, itemCount: itemRows.length });
 }
