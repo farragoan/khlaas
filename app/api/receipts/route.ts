@@ -90,7 +90,6 @@ async function extractViaGoogleAI(imageBase64: string): Promise<OcrResult> {
           ],
         },
       ],
-      generationConfig: { responseMimeType: "application/json" },
     }),
   });
 
