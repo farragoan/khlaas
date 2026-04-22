@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const GOOGLE_AI_API_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemma-4-31b-it:generateContent";
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 interface OcrItem {
   name: string;
