@@ -1,21 +1,61 @@
 # khlaas — Product Roadmap
 
-_Last updated: 2026-04-22_
+_Last updated: 2026-04-25_
+
+---
+
+## P0 — Must ship
+
+### Clerk Auth with Optional Guest Flow
+**PRD:** `docs/PRDs/clerk-auth-guest-flow.md`
+
+Sign in with Clerk OR continue as a named guest — no forced gate. Authenticated users get `participants.user_id` populated for future bill history. Anonymous flow stays fully intact.
+- [ ] Install `@clerk/nextjs`, wrap layout with `ClerkProvider`
+- [ ] Middleware in passive mode (no route blocking in V1)
+- [ ] Home page: optional "Sign in" link alongside guest flow
+- [ ] `ParticipantJoin` modal: secondary "Sign in instead" option
+- [ ] `POST /api/participants`: set `user_id` from Clerk session if present
+- [ ] `participants.user_id` type: `uuid` → `text` (Clerk IDs are strings)
+- [ ] Env vars: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`
+
+### Post-Scan Share Sheet with QR Code
+**PRD:** `docs/PRDs/post-scan-share-sheet-qr.md`
+
+After the receipt is scanned, show a 1s success CTA that dissolves into a full share sheet with a scannable QR code, room code, and live participant dots. Host taps "Continue to bill" when everyone is in.
+- [ ] Install `qrcode.react`
+- [ ] Add `phase: "idle" | "share" | "items"` state to `TablePage`
+- [ ] Transition to `share` phase when status changes `active → items_ready` for the first time
+- [ ] Skip to `items` if page loads with `items_ready` already set (refresh case)
+- [ ] New `ShareRoomSheet` component: QR code, room code, copy/share buttons, live participant dots, "Continue →" button
+- [ ] Success state: 1s hold + checkmark animation, dissolves into share sheet
+
+### Split Edit Mode
+**PRD:** `docs/PRDs/split-edit-mode.md`
+
+Host can re-open a settled bill from the settle page. Everyone can edit selections; host can edit any participant's selections. New participants can join. Host closes edit mode and re-settles.
+- [ ] Add `editing` to `status` enum in schema + DB
+- [ ] `POST /api/tables/[shareCode]/reopen` — host only; clears ledger + payments, sets `editing`
+- [ ] `POST /api/tables/[shareCode]/close-edit` — host only; sets `items_ready`
+- [ ] `POST /api/selections`: allow cross-participant edits when requester is host
+- [ ] Settle page: "Re-open bill" button (host only) + confirmation modal
+- [ ] Item list: "Edit mode" banner, host participant switcher
+- [ ] Non-host: "Waiting for host to close editing" message
+- [ ] All screens transition automatically when status changes (polling / ElectricSQL)
 
 ---
 
 ## In Progress
 
-### Payments, Tip & Settlement Detail
+### Payments, Tip & Settlement Detail ✓ shipped
 **Spec:** `docs/superpowers/specs/2026-04-22-payments-tip-settlement-design.md`
 
-- [ ] `payments` table + `tip` column on `split_tables` (schema + drizzle)
-- [ ] `POST /api/payments` upsert endpoint
-- [ ] `computeLedger` updated to use `net = owes - paid` + tip distribution
-- [ ] Pre-settle sheet UI (who paid, how much, tip input)
-- [ ] Settle page: "Paid by" section
-- [ ] Settle page: per-person detail slide-in panel
-- [ ] `GET /api/tables/[shareCode]` returns payments
+- [x] `payments` table + `tip` column on `split_tables` (schema + drizzle)
+- [x] `POST /api/payments` upsert endpoint
+- [x] `computeLedger` updated to use `net = owes - paid` + tip distribution
+- [x] Pre-settle sheet UI (who paid, how much, tip input)
+- [x] Settle page: "Paid by" section
+- [x] Settle page: per-person detail slide-in panel
+- [x] `GET /api/tables/[shareCode]` returns payments
 
 ---
 
@@ -27,11 +67,11 @@ The receipt OCR route calls Google AI Studio without retry logic. Three issues t
 - [ ] Ensure the upload button resets to idle state on failure so the user can press it again and re-trigger the API call
 - [ ] Debounce the upload/process button so rapid taps don't fire multiple concurrent requests
 
-### Netlify Deployment
-- [ ] Add `netlify.toml` with Next.js plugin
-- [ ] Configure `@netlify/plugin-nextjs`
-- [ ] Document required env vars for Netlify dashboard
-- [ ] Verify build passes (`next build`)
+### Netlify Deployment ✓ shipped
+- [x] Add `netlify.toml` with Next.js plugin
+- [x] Configure `@netlify/plugin-nextjs`
+- [x] Document required env vars for Netlify dashboard
+- [x] Verify build passes (`next build`)
 
 ### Real-Time Sync (ElectricSQL → replace polling)
 Currently using 2s interval polling in `useTableData`. Replace with ElectricSQL shape
