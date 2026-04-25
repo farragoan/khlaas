@@ -1,9 +1,9 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Share2, Loader2, Users } from "lucide-react";
+import { Share2, Loader2, Users, Pencil, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useTableData } from "@/hooks/use-table-data";
 import { useSession } from "@/hooks/use-session";
@@ -12,8 +12,16 @@ import { ReceiptUpload } from "@/components/receipt-upload";
 import { ProcessingState } from "@/components/processing-state";
 import { ItemList } from "@/components/item-list";
 import { PreSettleSheet } from "@/components/pre-settle-sheet";
+import { ShareRoomSheet } from "@/components/share-room-sheet";
 import { CurrencyProvider } from "@/lib/currency-context";
 import type { Selection } from "@/hooks/use-table-data";
+
+// Phase state machine for post-scan flow
+// idle    = before any scan
+// success = 1-second success state after OCR completes
+// share   = share sheet shown (QR + invite)
+// items   = item selection view
+type Phase = "idle" | "success" | "share" | "items";
 
 export default function TablePage({
   params,
@@ -26,6 +34,40 @@ export default function TablePage({
   const { session, saveSession } = useSession(data?.table?.id ?? null);
   const [localSelections, setLocalSelections] = useState<Selection[] | null>(null);
   const [showSettle, setShowSettle] = useState(false);
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [editingParticipantId, setEditingParticipantId] = useState<string | undefined>(undefined);
+  const prevStatusRef = useRef<string | null>(null);
+
+  // Phase transitions based on table status
+  useEffect(() => {
+    if (!data) return;
+    const status = data.table.status;
+    const prev = prevStatusRef.current;
+
+    if (prev === null) {
+      // Initial load
+      if (status === "items_ready" || status === "editing") {
+        setPhase("items");
+      }
+      // status === "active" → phase stays "idle"
+    } else if (prev === "active" && status === "items_ready") {
+      // OCR just completed — show success then share sheet
+      setPhase("success");
+      const t = setTimeout(() => setPhase("share"), 1000);
+      return () => clearTimeout(t);
+    } else if (status === "editing" && phase === "idle") {
+      setPhase("items");
+    }
+
+    prevStatusRef.current = status;
+  }, [data?.table?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reset editingParticipantId to own participant when entering edit mode
+  useEffect(() => {
+    if (data?.table?.status === "editing" && session) {
+      setEditingParticipantId(session.participantId);
+    }
+  }, [data?.table?.status, session?.participantId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (
@@ -46,17 +88,31 @@ export default function TablePage({
   const { table, items, participants, selections } = data;
   const activeSelections = localSelections ?? selections;
   const isHost = participants[0]?.id === session?.participantId;
+  const isEditing = table.status === "editing";
 
-  // Bill total from items (for the mismatch warning in the pre-settle sheet)
   const billTotal = items.reduce((sum, i) => sum + parseFloat(i.totalPrice ?? "0"), 0);
 
   function handleShare() {
     const url = `${window.location.origin}/t/${shareCode}`;
     if (navigator.share) {
-      navigator.share({ title: "Split this bill on khlaas", url });
+      navigator.share({ title: "Split this bill on खल्लास", url });
     } else {
       navigator.clipboard.writeText(url);
       toast.success("Link copied!");
+    }
+  }
+
+  async function handleCloseEdit() {
+    if (!session) return;
+    try {
+      const res = await fetch(`/api/tables/${shareCode}/close-edit`, {
+        method: "POST",
+        headers: { "x-session-token": session.sessionToken },
+      });
+      if (!res.ok) throw new Error("Failed");
+      refresh();
+    } catch {
+      toast.error("Couldn't close editing, try again");
     }
   }
 
@@ -64,6 +120,8 @@ export default function TablePage({
     router.replace(`/t/${shareCode}/settle`);
     return null;
   }
+
+  const showItems = table.status === "items_ready" || table.status === "editing";
 
   return (
     <CurrencyProvider value={table.currency ?? "INR"}>
@@ -80,6 +138,20 @@ export default function TablePage({
         </button>
       </div>
 
+      {/* Edit mode banner */}
+      {isEditing && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-2 mb-4 px-3 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30"
+        >
+          <Pencil size={14} className="text-[var(--brand)] flex-shrink-0" />
+          <p className="text-[var(--brand)] text-sm font-medium flex-1">
+            Edit mode — update selections before settling
+          </p>
+        </motion.div>
+      )}
+
       {/* Participants strip */}
       {participants.length > 0 && (
         <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-1">
@@ -91,12 +163,13 @@ export default function TablePage({
                 initial={{ x: 20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ type: "spring", damping: 18 }}
-                className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium ${
+                className={`flex-shrink-0 flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${
                   p.id === session?.participantId
                     ? "bg-[var(--brand)] text-black"
                     : "bg-[var(--surface-raised)] text-zinc-300"
                 }`}
               >
+                {isEditing && <Pencil size={10} />}
                 {p.displayName}
               </motion.div>
             ))}
@@ -106,7 +179,8 @@ export default function TablePage({
 
       {/* Main content */}
       <AnimatePresence mode="wait">
-        {table.status === "active" && isHost && (
+        {/* Idle: upload (host) or waiting (non-host) */}
+        {table.status === "active" && phase === "idle" && isHost && (
           <motion.div
             key="upload"
             initial={{ opacity: 0 }}
@@ -133,14 +207,58 @@ export default function TablePage({
           </motion.div>
         )}
 
-        {table.status === "items_ready" && (
+        {/* Success state: 1s after OCR completes */}
+        {phase === "success" && (
+          <motion.div
+            key="success"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.3 }}
+            className="flex flex-col items-center justify-center py-16 gap-4"
+          >
+            <motion.div
+              animate={{ scale: [1, 1.15, 1] }}
+              transition={{ duration: 0.5, ease: "easeInOut" }}
+              className="w-16 h-16 rounded-full bg-[var(--brand)]/20 flex items-center justify-center"
+            >
+              <Check size={32} className="text-[var(--brand)]" />
+            </motion.div>
+            <div className="text-center">
+              <p className="text-white font-semibold text-lg">Bill scanned!</p>
+              <p className="text-zinc-400 text-sm">{items.length} items found</p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Share sheet */}
+        {phase === "share" && (
+          <motion.div
+            key="share"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <ShareRoomSheet
+              shareCode={shareCode}
+              participants={participants}
+              onContinue={() => setPhase("items")}
+            />
+          </motion.div>
+        )}
+
+        {/* Items view */}
+        {showItems && phase === "items" && (
           <motion.div
             key="items"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="space-y-4"
           >
-            <p className="text-sm text-zinc-400">Tap everything you ate</p>
+            {!isEditing && (
+              <p className="text-sm text-zinc-400">Tap everything you ate</p>
+            )}
             {session && (
               <ItemList
                 items={items}
@@ -148,6 +266,10 @@ export default function TablePage({
                 selections={activeSelections}
                 session={session}
                 onSelectionsChange={setLocalSelections}
+                isEditMode={isEditing}
+                isHost={isHost}
+                editingParticipantId={isEditing ? editingParticipantId : undefined}
+                onEditingParticipantChange={isEditing && isHost ? setEditingParticipantId : undefined}
               />
             )}
           </motion.div>
@@ -155,15 +277,35 @@ export default function TablePage({
       </AnimatePresence>
 
       {/* Bottom bar */}
-      {table.status === "items_ready" && isHost && (
+      {showItems && phase === "items" && isHost && (
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0F0F0F]/90 backdrop-blur-sm border-t border-zinc-800">
-          <div className="max-w-lg mx-auto">
+          <div className="max-w-lg mx-auto space-y-2">
+            {isEditing && (
+              <button
+                onClick={handleCloseEdit}
+                className="w-full h-11 flex items-center justify-center gap-2 rounded-xl border border-zinc-700 text-zinc-300 text-sm font-medium hover:border-zinc-500 hover:text-zinc-100 active:scale-95 transition-all"
+              >
+                <Check size={16} />
+                Done editing
+              </button>
+            )}
             <button
               onClick={() => setShowSettle(true)}
               className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all"
             >
               Settle up →
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Non-host waiting message in edit mode */}
+      {isEditing && !isHost && phase === "items" && (
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0F0F0F]/90 backdrop-blur-sm border-t border-zinc-800">
+          <div className="max-w-lg mx-auto">
+            <p className="text-center text-zinc-500 text-sm">
+              Waiting for {participants[0]?.displayName ?? "host"} to close editing…
+            </p>
           </div>
         </div>
       )}

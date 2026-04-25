@@ -14,11 +14,28 @@ interface ItemListProps {
   selections: Selection[];
   session: Session;
   onSelectionsChange: (selections: Selection[]) => void;
+  isEditMode?: boolean;
+  isHost?: boolean;
+  editingParticipantId?: string;
+  onEditingParticipantChange?: (id: string) => void;
 }
 
-export function ItemList({ items, participants, selections, session, onSelectionsChange }: ItemListProps) {
+export function ItemList({
+  items,
+  participants,
+  selections,
+  session,
+  onSelectionsChange,
+  isEditMode = false,
+  isHost = false,
+  editingParticipantId,
+  onEditingParticipantChange,
+}: ItemListProps) {
   const [listRef] = useAutoAnimate<HTMLDivElement>();
   const [localSelections, setLocalSelections] = useState<Selection[]>(selections);
+
+  // The participant whose selections we're viewing/editing
+  const activeParticipantId = editingParticipantId ?? session.participantId;
 
   // Sync external selections (from polling) into local state
   const latestExternal = useRef(selections);
@@ -32,7 +49,7 @@ export function ItemList({ items, participants, selections, session, onSelection
 
   function isSelected(itemId: string) {
     return localSelections.some(
-      (s) => s.itemId === itemId && s.participantId === session.participantId
+      (s) => s.itemId === itemId && s.participantId === activeParticipantId
     );
   }
 
@@ -50,12 +67,12 @@ export function ItemList({ items, participants, selections, session, onSelection
     // Optimistic update
     if (selected) {
       const next = localSelections.filter(
-        (s) => !(s.itemId === item.id && s.participantId === session.participantId)
+        (s) => !(s.itemId === item.id && s.participantId === activeParticipantId)
       );
       setLocalSelections(next);
       onSelectionsChange(next);
     } else {
-      const next = [...localSelections, { itemId: item.id, participantId: session.participantId }];
+      const next = [...localSelections, { itemId: item.id, participantId: activeParticipantId }];
       setLocalSelections(next);
       onSelectionsChange(next);
     }
@@ -67,7 +84,7 @@ export function ItemList({ items, participants, selections, session, onSelection
           "Content-Type": "application/json",
           "x-session-token": session.sessionToken,
         },
-        body: JSON.stringify({ participantId: session.participantId, itemId: item.id }),
+        body: JSON.stringify({ participantId: activeParticipantId, itemId: item.id }),
       });
 
       if (!res.ok) throw new Error("Failed");
@@ -81,6 +98,36 @@ export function ItemList({ items, participants, selections, session, onSelection
 
   return (
     <div className="space-y-6">
+      {/* Host participant switcher (edit mode only) */}
+      {isEditMode && isHost && participants.length > 1 && (
+        <div className="space-y-1">
+          <p className="text-xs text-zinc-500 uppercase tracking-wider px-1">Editing for</p>
+          <div className="flex flex-wrap gap-2">
+            {participants.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => onEditingParticipantChange?.(p.id)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  p.id === activeParticipantId
+                    ? "bg-[var(--brand)] text-black"
+                    : "bg-[var(--surface-raised)] text-zinc-300 hover:bg-zinc-700"
+                }`}
+              >
+                {p.displayName}
+                {p.id === session.participantId && " (you)"}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Non-host in edit mode: show whose context is active */}
+      {isEditMode && !isHost && (
+        <p className="text-xs text-zinc-500 text-center">
+          Editing your selections — host will close edit mode when ready
+        </p>
+      )}
+
       <div ref={listRef} className="space-y-2">
         {regularItems.map((item) => (
           <ItemRow

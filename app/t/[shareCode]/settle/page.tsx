@@ -3,9 +3,10 @@
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Share2, ChevronLeft } from "lucide-react";
+import { Share2, ChevronLeft, RotateCcw, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useTableData } from "@/hooks/use-table-data";
+import { useSession } from "@/hooks/use-session";
 import { Price } from "@/components/price";
 import { CurrencyProvider } from "@/lib/currency-context";
 import type { Participant, LedgerEntry, Payment, Item } from "@/lib/db/schema";
@@ -33,7 +34,6 @@ function PersonDetail({
   const regularItems = items.filter((i) => !i.isFee);
   const feeItems = items.filter((i) => i.isFee);
 
-  // Compute food subtotals for all participants to get proportions
   const allFoodSubtotals: Record<string, number> = {};
   for (const item of regularItems) {
     const selectors = selections.filter((s) => s.itemId === item.id);
@@ -52,7 +52,6 @@ function PersonDetail({
   const myFeeShare = totalFees * proportion;
   const myTipShare = tip * proportion;
 
-  // Rows for items this participant selected
   const myFoodRows = regularItems
     .filter((i) => selections.some((s) => s.itemId === i.id && s.participantId === participant.id))
     .map((i) => {
@@ -85,7 +84,6 @@ function PersonDetail({
         </div>
       </div>
 
-      {/* Food items */}
       <div className="space-y-3 mb-4">
         {myFoodRows.length === 0 && (
           <p className="text-zinc-500 text-sm py-4 text-center">No items selected</p>
@@ -103,7 +101,6 @@ function PersonDetail({
         ))}
       </div>
 
-      {/* Fees + tip */}
       {(feeItems.length > 0 || myTipShare > 0) && (
         <div className="border-t border-zinc-800 pt-3 space-y-2 mb-4">
           {feeItems.map((f) => (
@@ -121,7 +118,6 @@ function PersonDetail({
         </div>
       )}
 
-      {/* Totals */}
       <div className="border-t border-zinc-800 pt-3 space-y-2">
         <div className="flex justify-between text-sm">
           <span className="text-zinc-400">Total owed</span>
@@ -189,6 +185,64 @@ function PersonTotal({
   );
 }
 
+function ReopenConfirmModal({
+  hostName,
+  onConfirm,
+  onCancel,
+  loading,
+}: {
+  hostName: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading: boolean;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center"
+      onClick={onCancel}
+    >
+      <motion.div
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "spring", damping: 28, stiffness: 300 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-lg bg-[#1A1A1A] rounded-t-2xl px-4 pt-5 pb-10"
+      >
+        <div className="flex items-start gap-3 mb-5">
+          <div className="w-10 h-10 rounded-full bg-amber-500/15 flex items-center justify-center flex-shrink-0">
+            <AlertTriangle size={20} className="text-amber-400" />
+          </div>
+          <div>
+            <h3 className="text-white font-semibold mb-1">Re-open this bill?</h3>
+            <p className="text-zinc-400 text-sm">
+              This will clear the current settlement. {hostName} and everyone else can update their selections.
+            </p>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            className="w-full h-12 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl active:scale-95 transition-all disabled:opacity-60"
+          >
+            {loading ? "Reopening…" : "Re-open bill"}
+          </button>
+          <button
+            onClick={onCancel}
+            className="w-full h-12 text-zinc-400 text-sm hover:text-zinc-200 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function SettlePage({
   params,
 }: {
@@ -197,7 +251,10 @@ export default function SettlePage({
   const { shareCode } = use(params);
   const router = useRouter();
   const { data, loading } = useTableData(shareCode);
+  const { session } = useSession(data?.table?.id ?? null);
   const [detailParticipant, setDetailParticipant] = useState<Participant | null>(null);
+  const [showReopenModal, setShowReopenModal] = useState(false);
+  const [reopening, setReopening] = useState(false);
 
   if (loading || !data) {
     return (
@@ -209,6 +266,7 @@ export default function SettlePage({
 
   const { table, participants, ledger, payments, items, selections } = data;
   const tip = parseFloat(table.tip ?? "0");
+  const isHost = participants[0]?.id === session?.participantId;
 
   if (table.status !== "settled") {
     router.replace(`/t/${shareCode}`);
@@ -222,12 +280,30 @@ export default function SettlePage({
           `${participantName(e.fromParticipant, participants)} pays ${participantName(e.toParticipant, participants)} ${new Intl.NumberFormat(undefined, { style: "currency", currency: table.currency ?? "INR" }).format(parseFloat(e.amount))}`
       )
       .join("\n");
-    const text = `Bill settled via khlaas:\n${lines}`;
+    const text = `Bill settled via खल्लास:\n${lines}`;
     if (navigator.share) {
       navigator.share({ text });
     } else {
       navigator.clipboard.writeText(text);
       toast.success("Summary copied!");
+    }
+  }
+
+  async function handleReopen() {
+    if (!session) return;
+    setReopening(true);
+    try {
+      const res = await fetch(`/api/tables/${shareCode}/reopen`, {
+        method: "POST",
+        headers: { "x-session-token": session.sessionToken },
+      });
+      if (!res.ok) throw new Error("Failed");
+      // The settle page will auto-redirect to /t/[shareCode] as status changes
+      router.replace(`/t/${shareCode}`);
+    } catch {
+      toast.error("Couldn't reopen the bill, try again");
+      setReopening(false);
+      setShowReopenModal(false);
     }
   }
 
@@ -330,6 +406,24 @@ export default function SettlePage({
             Everyone&apos;s even — no transfers needed
           </motion.p>
         )}
+
+        {/* Re-open bill (host only) */}
+        {isHost && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="mt-8 flex justify-center"
+          >
+            <button
+              onClick={() => setShowReopenModal(true)}
+              className="flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors px-4 py-2 rounded-xl hover:bg-zinc-900"
+            >
+              <RotateCcw size={14} />
+              Re-open bill
+            </button>
+          </motion.div>
+        )}
       </main>
 
       {/* Per-person detail panel */}
@@ -342,6 +436,18 @@ export default function SettlePage({
             payments={payments}
             tip={tip}
             onClose={() => setDetailParticipant(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Reopen confirmation modal */}
+      <AnimatePresence>
+        {showReopenModal && (
+          <ReopenConfirmModal
+            hostName={participants[0]?.displayName ?? "You"}
+            onConfirm={handleReopen}
+            onCancel={() => setShowReopenModal(false)}
+            loading={reopening}
           />
         )}
       </AnimatePresence>

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import type { Participant } from "@/lib/db/schema";
 import { Price } from "@/components/price";
 import { useCurrency, getCurrencySymbol } from "@/lib/currency-context";
+import { parseLocalizedNumber } from "@/lib/utils";
 
 interface Props {
   tableId: string;
@@ -26,11 +27,10 @@ export function PreSettleSheet({ tableId, participants, billTotal, onSettled, on
   const [tip, setTip] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const tipAmount = parseFloat(tip || "0") || 0;
+  const tipAmount = parseLocalizedNumber(tip || "0");
 
   const totalEntered = participants.reduce((sum, p) => {
-    const v = parseFloat(amounts[p.id] || "0");
-    return sum + (isNaN(v) ? 0 : v);
+    return sum + parseLocalizedNumber(amounts[p.id] || "0");
   }, 0) + tipAmount;
 
   const totalWithTip = billTotal + tipAmount;
@@ -38,7 +38,7 @@ export function PreSettleSheet({ tableId, participants, billTotal, onSettled, on
 
   async function handleSubmit() {
     const paymentEntries = participants
-      .map((p) => ({ participantId: p.id, amount: parseFloat(amounts[p.id] || "0") || 0 }))
+      .map((p) => ({ participantId: p.id, amount: parseLocalizedNumber(amounts[p.id] || "0") }))
       .filter((e) => e.amount > 0);
 
     if (paymentEntries.length === 0) {
@@ -112,7 +112,7 @@ export function PreSettleSheet({ tableId, participants, billTotal, onSettled, on
               <div className="flex items-center gap-1 bg-[var(--surface)] rounded-xl px-3 py-2">
                 <span className="text-zinc-400 text-sm">{currencySymbol}</span>
                 <input
-                  type="number"
+                  type="text"
                   inputMode="decimal"
                   placeholder="0"
                   value={amounts[p.id]}
@@ -130,7 +130,7 @@ export function PreSettleSheet({ tableId, participants, billTotal, onSettled, on
           <div className="flex items-center gap-1 bg-[var(--surface)] rounded-xl px-3 py-2">
             <span className="text-zinc-400 text-sm">{currencySymbol}</span>
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
               placeholder="0"
               value={tip}

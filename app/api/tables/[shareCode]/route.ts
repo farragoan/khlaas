@@ -33,7 +33,7 @@ export async function GET(
           .where(eq(items.tableId, table.id))
       : Promise.resolve([]),
     db.select().from(payments).where(eq(payments.tableId, table.id)),
-    table.status === "settled"
+    (table.status === "settled" || table.status === "editing")
       ? db.select().from(ledgerEntries).where(eq(ledgerEntries.tableId, table.id))
       : Promise.resolve([]),
   ]);

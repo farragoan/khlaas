@@ -22,7 +22,7 @@ export const splitTables = pgTable(
     status: text("status")
       .notNull()
       .default("active")
-      .$type<"active" | "items_ready" | "settled" | "expired">(),
+      .$type<"active" | "items_ready" | "editing" | "settled" | "expired">(),
     receiptUrl: text("receipt_url"),
     rawOcr: text("raw_ocr"), // JSONB stored as text for simplicity
     tip: numeric("tip", { precision: 10, scale: 2 }).default("0"),
@@ -32,7 +32,7 @@ export const splitTables = pgTable(
     uniqueIndex("idx_split_tables_share_code").on(t.shareCode),
     check(
       "status_check",
-      sql`${t.status} IN ('active', 'items_ready', 'settled', 'expired')`
+      sql`${t.status} IN ('active', 'items_ready', 'editing', 'settled', 'expired')`
     ),
   ]
 );
