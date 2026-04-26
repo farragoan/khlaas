@@ -1,6 +1,6 @@
 # khlaas — Product Roadmap
 
-_Last updated: 2026-04-25_
+_Last updated: 2026-04-26_
 
 ---
 
@@ -18,45 +18,6 @@ Sign in with Clerk OR continue as a named guest — no forced gate. Authenticate
 - [ ] `participants.user_id` type: `uuid` → `text` (Clerk IDs are strings)
 - [ ] Env vars: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`
 
-### Post-Scan Share Sheet with QR Code
-**PRD:** `docs/PRDs/post-scan-share-sheet-qr.md`
-
-After the receipt is scanned, show a 1s success CTA that dissolves into a full share sheet with a scannable QR code, room code, and live participant dots. Host taps "Continue to bill" when everyone is in.
-- [ ] Install `qrcode.react`
-- [ ] Add `phase: "idle" | "share" | "items"` state to `TablePage`
-- [ ] Transition to `share` phase when status changes `active → items_ready` for the first time
-- [ ] Skip to `items` if page loads with `items_ready` already set (refresh case)
-- [ ] New `ShareRoomSheet` component: QR code, room code, copy/share buttons, live participant dots, "Continue →" button
-- [ ] Success state: 1s hold + checkmark animation, dissolves into share sheet
-
-### Split Edit Mode
-**PRD:** `docs/PRDs/split-edit-mode.md`
-
-Host can re-open a settled bill from the settle page. Everyone can edit selections; host can edit any participant's selections. New participants can join. Host closes edit mode and re-settles.
-- [ ] Add `editing` to `status` enum in schema + DB
-- [ ] `POST /api/tables/[shareCode]/reopen` — host only; clears ledger + payments, sets `editing`
-- [ ] `POST /api/tables/[shareCode]/close-edit` — host only; sets `items_ready`
-- [ ] `POST /api/selections`: allow cross-participant edits when requester is host
-- [ ] Settle page: "Re-open bill" button (host only) + confirmation modal
-- [ ] Item list: "Edit mode" banner, host participant switcher
-- [ ] Non-host: "Waiting for host to close editing" message
-- [ ] All screens transition automatically when status changes (polling / ElectricSQL)
-
----
-
-## In Progress
-
-### Payments, Tip & Settlement Detail ✓ shipped
-**Spec:** `docs/superpowers/specs/2026-04-22-payments-tip-settlement-design.md`
-
-- [x] `payments` table + `tip` column on `split_tables` (schema + drizzle)
-- [x] `POST /api/payments` upsert endpoint
-- [x] `computeLedger` updated to use `net = owes - paid` + tip distribution
-- [x] Pre-settle sheet UI (who paid, how much, tip input)
-- [x] Settle page: "Paid by" section
-- [x] Settle page: per-person detail slide-in panel
-- [x] `GET /api/tables/[shareCode]` returns payments
-
 ---
 
 ## Planned
@@ -64,18 +25,11 @@ Host can re-open a settled bill from the settle page. Everyone can edit selectio
 ### Google AI OCR Reliability (Bug)
 The receipt OCR route calls Google AI Studio without retry logic. Three issues to fix:
 - [ ] Exponential backoff with 3 retries on Google AI API calls (`extractViaGoogleAI` in `app/api/receipts/route.ts`)
-- [ ] Ensure the upload button resets to idle state on failure so the user can press it again and re-trigger the API call
-- [ ] Debounce the upload/process button so rapid taps don't fire multiple concurrent requests
-
-### Netlify Deployment ✓ shipped
-- [x] Add `netlify.toml` with Next.js plugin
-- [x] Configure `@netlify/plugin-nextjs`
-- [x] Document required env vars for Netlify dashboard
-- [x] Verify build passes (`next build`)
+- [ ] Upload button resets to idle on failure so the user can re-trigger
+- [ ] Debounce the upload/process button to prevent concurrent requests
 
 ### Real-Time Sync (ElectricSQL → replace polling)
-Currently using 2s interval polling in `useTableData`. Replace with ElectricSQL shape
-subscriptions for instant updates across all participants.
+Currently using 2s interval polling in `useTableData`. Replace with ElectricSQL shape subscriptions for instant updates.
 - [ ] Wire up ElectricSQL sync engine to Neon (logical replication)
 - [ ] Replace `useTableData` polling with shape subscriptions
 - [ ] Shapes: `split_tables`, `items`, `participants`, `selections`, `payments`
@@ -107,14 +61,8 @@ Currently all shared items split equally among selectors.
 - [ ] Unequal split (enter custom amounts per person)
 - [ ] "For the table" items (auto-split equally among all participants)
 
-### Currency & Locale Support
-Currently hardcoded to ₹.
-- [ ] Detect locale on table creation
-- [ ] Store currency code on `split_tables`
-- [ ] `<Price>` component renders correct symbol and formatting
-
 ### Settle Screen: Share Summary
-The share button currently shares a plain text list. Improve it.
+The share button currently shares a plain text list.
 - [ ] Rich share card (OG image) showing totals
 - [ ] Deep link per person: "Dhruv, you owe ₹304 — tap to see details"
 - [ ] WhatsApp / UPI intent support
@@ -128,15 +76,7 @@ The share button currently shares a plain text list. Improve it.
 
 ## V2 (Post-Auth)
 
-### Lucia Auth
-- [ ] `users` + `user_sessions` tables (already in schema.sql)
-- [ ] Sign-up / sign-in flow (email + OTP or OAuth)
-- [ ] Link anonymous V1 sessions to user account
-- [ ] `participants.user_id` populated for logged-in users
-- [ ] Restrict writes to authenticated owners
-
 ### Bill History
-Once auth exists:
 - [ ] `/history` page listing all tables the user participated in
 - [ ] Cross-bill balance with a friend ("you owe Arjun ₹X across 3 bills")
 
@@ -147,8 +87,40 @@ Once auth exists:
 
 ---
 
+## Shipped
+
+### Post-Scan Share Sheet with QR Code ✓
+_Shipped: 2026-04-26_ · `ec3ec23`
+**PRD:** `docs/PRDs/post-scan-share-sheet-qr.md`
+
+1s success toast → full share sheet with QR code, room code, copy/share, live participant dots, "Continue to bill" CTA.
+
+### Split Edit Mode ✓
+_Shipped: 2026-04-26_ · `ec3ec23`
+**PRD:** `docs/PRDs/split-edit-mode.md`
+
+Host can re-open settled bills. Everyone edits selections; host edits any participant. New participants can join. Host closes edit mode and re-settles.
+
+### Currency & Locale Support ✓
+_Shipped: 2026-04-26_ · `ec3ec23` + `a26d022`
+
+Locale auto-detected on table creation, currency stored on `split_tables`, `<Price>` renders correct symbol and formatting, currency selector on home page.
+
+### Payments, Tip & Settlement Detail ✓
+_Shipped: 2026-04-22_
+
+`payments` table + `tip` column, `POST /api/payments` upsert, `computeLedger` with net = owes − paid + tip distribution, pre-settle sheet, settle page per-person detail panel.
+
+### Netlify Deployment ✓
+_Shipped: 2026-04-22_
+
+`netlify.toml` with `@netlify/plugin-nextjs`, env vars documented, build verified.
+
+---
+
 ## Won't Do (explicitly out of scope for V1)
 
 - Native mobile app (PWA covers the use case)
 - In-app payments / UPI integration (out of regulatory scope for V1)
 - Multi-currency bills (one currency per table only)
+- Lucia Auth (replaced by Clerk)

@@ -1,8 +1,9 @@
 # PRD: Split Edit Mode
 
 **Priority:** P0
-**Status:** Planned
-**Last updated:** 2026-04-25
+**Status:** Shipped ✓
+**Shipped:** 2026-04-26 (`ec3ec23`)
+**Last updated:** 2026-04-26
 
 ---
 
