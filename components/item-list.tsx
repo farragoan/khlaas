@@ -4,13 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { toast } from "sonner";
 import { ItemRow } from "./item-row";
-import type { Item, Participant } from "@/lib/db/schema";
-import type { Selection } from "@/hooks/use-table-data";
+import type { Item } from "@/lib/db/schema";
+import type { Selection, PublicParticipant } from "@/hooks/use-table-data";
 import type { Session } from "@/hooks/use-session";
 
 interface ItemListProps {
   items: Item[];
-  participants: Participant[];
+  participants: PublicParticipant[];
   selections: Selection[];
   session: Session;
   onSelectionsChange: (selections: Selection[]) => void;

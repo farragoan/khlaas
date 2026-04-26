@@ -4,6 +4,34 @@ _Last updated: 2026-04-26_
 
 ---
 
+## Security
+
+Shipped in this pass: session token leak fixed, auth added to payments/ledger/receipts endpoints, security headers added. Remaining:
+
+### API Rate Limiting _(P1)_
+**PRD:** `docs/PRDs/security-rate-limiting.md`
+
+Upstash Redis + `@upstash/ratelimit` middleware. Strict limits on `/api/receipts` (3/min) and `/api/participants` (10/min) to prevent abuse and AI API credit drain.
+- [ ] Install `@upstash/ratelimit` + `@upstash/redis`
+- [ ] `middleware.ts` with per-route sliding window limits
+- [ ] Provision Upstash (free tier) and add env vars to Netlify
+
+### Session Token Hashing _(P1)_
+**PRD:** `docs/PRDs/security-session-hardening.md`
+
+Store `SHA-256(token)` in DB instead of raw token. DB leak no longer exposes usable credentials.
+- [ ] Add `session_token_hash` column, drop `session_token`
+- [ ] Update `lib/auth.ts`, `app/api/participants/route.ts`, all auth checks
+- [ ] `npx drizzle-kit push`
+
+### Infrastructure Hardening _(user actions — see `docs/user-actions.md`)_
+- [ ] Cloudflare WAF + rate limiting in front of Netlify
+- [ ] Neon IP allowlisting to Netlify outbound ranges
+- [ ] Quarterly key rotation (Google AI, OpenRouter, Neon)
+- [ ] Sentry error monitoring before public launch
+
+---
+
 ## P0 — Must ship
 
 ### Clerk Auth with Optional Guest Flow

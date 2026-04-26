@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { splitTables, items } from "@/lib/db/schema";
 import { ProcessReceiptSchema } from "@/lib/schemas";
+import { verifyHostSession } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -113,6 +114,11 @@ async function extractReceiptItems(imageBase64: string): Promise<OcrResult> {
 }
 
 export async function POST(req: Request) {
+  const sessionToken = req.headers.get("x-session-token");
+  if (!sessionToken) {
+    return NextResponse.json({ error: "Missing session token" }, { status: 401 });
+  }
+
   const body = await req.json();
   const parsed = ProcessReceiptSchema.safeParse(body);
   if (!parsed.success) {
@@ -121,32 +127,35 @@ export async function POST(req: Request) {
 
   const { tableId, imageBase64 } = parsed.data;
 
-  let table: { id: string } | undefined;
+  let table: { id: string; status: string } | undefined;
   try {
     [table] = await db
-      .select({ id: splitTables.id })
+      .select({ id: splitTables.id, status: splitTables.status })
       .from(splitTables)
       .where(eq(splitTables.id, tableId))
       .limit(1);
-  } catch (err) {
-    return NextResponse.json(
-      { error: `Database error: ${err instanceof Error ? err.message : "unknown error"}` },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   if (!table) {
     return NextResponse.json({ error: "Table not found" }, { status: 404 });
   }
 
+  if (table.status !== "active") {
+    return NextResponse.json({ error: "Receipt already processed" }, { status: 409 });
+  }
+
+  const host = await verifyHostSession(tableId, sessionToken);
+  if (!host) {
+    return NextResponse.json({ error: "Only the host can scan a receipt" }, { status: 403 });
+  }
+
   let ocr: OcrResult;
   try {
     ocr = await extractReceiptItems(imageBase64);
-  } catch (err) {
-    return NextResponse.json(
-      { error: `OCR failed: ${err instanceof Error ? err.message : "unknown error"}` },
-      { status: 502 }
-    );
+  } catch {
+    return NextResponse.json({ error: "Failed to process receipt" }, { status: 502 });
   }
 
   // Build item rows
@@ -178,11 +187,8 @@ export async function POST(req: Request) {
       .update(splitTables)
       .set({ status: "items_ready" })
       .where(eq(splitTables.id, tableId));
-  } catch (err) {
-    return NextResponse.json(
-      { error: `Database error: ${err instanceof Error ? err.message : "unknown error"}` },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true, itemCount: itemRows.length });

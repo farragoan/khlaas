@@ -189,7 +189,7 @@ export default function TablePage({
             className="space-y-4 pt-4"
           >
             <p className="text-zinc-400 text-sm text-center">Scan your receipt to get started</p>
-            <ReceiptUpload tableId={table.id} onProcessed={refresh} />
+            <ReceiptUpload tableId={table.id} sessionToken={session!.sessionToken} onProcessed={refresh} />
           </motion.div>
         )}
 
@@ -314,6 +314,7 @@ export default function TablePage({
       {showSettle && (
         <PreSettleSheet
           tableId={table.id}
+          sessionToken={session!.sessionToken}
           participants={participants}
           billTotal={billTotal}
           onSettled={() => router.push(`/t/${shareCode}/settle`)}

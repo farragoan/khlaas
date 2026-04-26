@@ -2,9 +2,15 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { payments, participants } from "@/lib/db/schema";
 import { PaymentSchema } from "@/lib/schemas";
+import { verifyHostSession } from "@/lib/auth";
 import { and, eq } from "drizzle-orm";
 
 export async function POST(req: Request) {
+  const sessionToken = req.headers.get("x-session-token");
+  if (!sessionToken) {
+    return NextResponse.json({ error: "Missing session token" }, { status: 401 });
+  }
+
   const body = await req.json();
   const parsed = PaymentSchema.safeParse(body);
   if (!parsed.success) {
@@ -12,6 +18,11 @@ export async function POST(req: Request) {
   }
 
   const { tableId, participantId, amount } = parsed.data;
+
+  const host = await verifyHostSession(tableId, sessionToken);
+  if (!host) {
+    return NextResponse.json({ error: "Only the host can record payments" }, { status: 403 });
+  }
 
   // Verify participant belongs to this table
   const [participant] = await db

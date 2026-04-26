@@ -4,20 +4,21 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
-import type { Participant } from "@/lib/db/schema";
+import type { PublicParticipant } from "@/hooks/use-table-data";
 import { Price } from "@/components/price";
 import { useCurrency, getCurrencySymbol } from "@/lib/currency-context";
 import { parseLocalizedNumber } from "@/lib/utils";
 
 interface Props {
   tableId: string;
-  participants: Participant[];
+  sessionToken: string;
+  participants: PublicParticipant[];
   billTotal: number;
   onSettled: () => void;
   onClose: () => void;
 }
 
-export function PreSettleSheet({ tableId, participants, billTotal, onSettled, onClose }: Props) {
+export function PreSettleSheet({ tableId, sessionToken, participants, billTotal, onSettled, onClose }: Props) {
   const currency = useCurrency();
   const currencySymbol = getCurrencySymbol(currency);
 
@@ -53,7 +54,7 @@ export function PreSettleSheet({ tableId, participants, billTotal, onSettled, on
         paymentEntries.map((e) =>
           fetch("/api/payments", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "x-session-token": sessionToken },
             body: JSON.stringify({ tableId, participantId: e.participantId, amount: e.amount }),
           }).then((r) => {
             if (!r.ok) throw new Error("payment failed");
@@ -64,7 +65,7 @@ export function PreSettleSheet({ tableId, participants, billTotal, onSettled, on
       // Compute ledger with tip
       const res = await fetch("/api/ledger/compute", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-session-token": sessionToken },
         body: JSON.stringify({ tableId, tip: tipAmount }),
       });
       if (!res.ok) throw new Error("compute failed");

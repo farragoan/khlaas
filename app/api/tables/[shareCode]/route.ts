@@ -21,7 +21,16 @@ export async function GET(
 
   const [tableItems, tableParticipants] = await Promise.all([
     db.select().from(items).where(eq(items.tableId, table.id)),
-    db.select().from(participants).where(eq(participants.tableId, table.id)),
+    db
+      .select({
+        id: participants.id,
+        tableId: participants.tableId,
+        displayName: participants.displayName,
+        userId: participants.userId,
+        joinedAt: participants.joinedAt,
+      })
+      .from(participants)
+      .where(eq(participants.tableId, table.id)),
   ]);
 
   const [tableSelections, tablePayments, tableLedger] = await Promise.all([

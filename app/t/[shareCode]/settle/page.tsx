@@ -9,10 +9,10 @@ import { useTableData } from "@/hooks/use-table-data";
 import { useSession } from "@/hooks/use-session";
 import { Price } from "@/components/price";
 import { CurrencyProvider } from "@/lib/currency-context";
-import type { Participant, LedgerEntry, Payment, Item } from "@/lib/db/schema";
-import type { Selection } from "@/hooks/use-table-data";
+import type { LedgerEntry, Payment, Item } from "@/lib/db/schema";
+import type { Selection, PublicParticipant } from "@/hooks/use-table-data";
 
-function participantName(id: string, participants: Participant[]) {
+function participantName(id: string, participants: PublicParticipant[]) {
   return participants.find((p) => p.id === id)?.displayName ?? "Unknown";
 }
 
@@ -24,7 +24,7 @@ function PersonDetail({
   tip,
   onClose,
 }: {
-  participant: Participant;
+  participant: PublicParticipant;
   items: Item[];
   selections: Selection[];
   payments: Payment[];
@@ -149,7 +149,7 @@ function PersonTotal({
   index,
   onClick,
 }: {
-  participant: Participant;
+  participant: PublicParticipant;
   entries: LedgerEntry[];
   index: number;
   onClick: () => void;
@@ -252,7 +252,7 @@ export default function SettlePage({
   const router = useRouter();
   const { data, loading } = useTableData(shareCode);
   const { session } = useSession(data?.table?.id ?? null);
-  const [detailParticipant, setDetailParticipant] = useState<Participant | null>(null);
+  const [detailParticipant, setDetailParticipant] = useState<PublicParticipant | null>(null);
   const [showReopenModal, setShowReopenModal] = useState(false);
   const [reopening, setReopening] = useState(false);
 

@@ -2,11 +2,12 @@
 
 import { motion } from "framer-motion";
 import { Price } from "@/components/price";
-import type { Item, Participant } from "@/lib/db/schema";
+import type { Item } from "@/lib/db/schema";
+import type { PublicParticipant } from "@/hooks/use-table-data";
 
 interface ItemRowProps {
   item: Item;
-  selectors: Participant[];
+  selectors: PublicParticipant[];
   isSelected: boolean;
   isFee: boolean;
   onToggle: () => void;

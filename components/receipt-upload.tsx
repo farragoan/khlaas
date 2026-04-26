@@ -7,10 +7,11 @@ import { toast } from "sonner";
 
 interface ReceiptUploadProps {
   tableId: string;
+  sessionToken: string;
   onProcessed: () => void;
 }
 
-export function ReceiptUpload({ tableId, onProcessed }: ReceiptUploadProps) {
+export function ReceiptUpload({ tableId, sessionToken, onProcessed }: ReceiptUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -31,7 +32,7 @@ export function ReceiptUpload({ tableId, onProcessed }: ReceiptUploadProps) {
 
       const res = await fetch("/api/receipts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-session-token": sessionToken },
         body: JSON.stringify({ tableId, imageBase64: base64 }),
       });
 

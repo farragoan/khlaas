@@ -5,11 +5,11 @@ import { motion } from "framer-motion";
 import { Copy, Share2, ArrowRight, Check } from "lucide-react";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
-import type { Participant } from "@/lib/db/schema";
+import type { PublicParticipant } from "@/hooks/use-table-data";
 
 interface ShareRoomSheetProps {
   shareCode: string;
-  participants: Participant[];
+  participants: PublicParticipant[];
   onContinue: () => void;
 }
 

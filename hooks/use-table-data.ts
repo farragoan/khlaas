@@ -8,10 +8,13 @@ export interface Selection {
   itemId: string;
 }
 
+// sessionToken is never returned by the API — omit it from the client-side type
+export type PublicParticipant = Omit<Participant, "sessionToken">;
+
 export interface TableData {
   table: SplitTable;
   items: Item[];
-  participants: Participant[];
+  participants: PublicParticipant[];
   selections: Selection[];
   payments: Payment[];
   ledger: LedgerEntry[];

@@ -31,6 +31,49 @@ Once provided, the Clerk auth + guest flow PRD (`docs/PRDs/clerk-auth-guest-flow
 
 ---
 
+---
+
+## 3. Infrastructure Security (REQUIRED — cannot be done in code)
+
+### 3a. Put the site behind Cloudflare (STRONGLY RECOMMENDED)
+
+Cloudflare Free tier gives you: WAF rules blocking common attacks (SQLi, XSS, path traversal), DDoS protection, bot scoring, and TLS termination.
+
+Steps:
+1. Move DNS to Cloudflare (add your domain, get Cloudflare nameservers, update at registrar)
+2. Enable **WAF Managed Rules** — OWASP Core Rule Set
+3. Set **SSL/TLS mode → Full (strict)**
+4. Enable **Bot Fight Mode** (free tier)
+5. Add a rate-limit rule: max 20 requests / 10s per IP to `/api/*` paths
+
+Until Clerk auth is live, Cloudflare WAF is the primary protection against automated abuse of the unauthenticated API surface.
+
+### 3b. Neon IP allowlisting
+
+Neon supports database access restrictions. Until you need a DB from outside Netlify:
+1. Go to Neon console → your project → **Settings → IP Allow**
+2. Add Netlify's outbound IP ranges (or use Netlify IP restriction plugin)
+
+This prevents direct DB access even if your DB credentials leak.
+
+### 3c. Rotate API keys periodically
+
+Keys that should be rotated at least quarterly:
+- `GOOGLE_AI_STUDIO_API_KEY` — Google AI Studio console
+- `OPENROUTER_API_KEY` — OpenRouter dashboard
+- `DATABASE_URL` — Neon: rotate the connection string under **Branches → Reset password**
+
+### 3d. Error monitoring (RECOMMENDED before public launch)
+
+Currently, server errors are swallowed silently. Add Sentry to catch regressions:
+```bash
+npm install @sentry/nextjs
+npx @sentry/wizard@latest -i nextjs
+```
+Add `SENTRY_DSN` to Netlify env vars. This costs nothing under the free tier for the expected traffic volume.
+
+---
+
 ## Decisions Made Autonomously
 
 These were ambiguous in the PRDs — decisions recorded here for visibility.
