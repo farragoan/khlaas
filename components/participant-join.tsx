@@ -4,6 +4,7 @@ import { useState } from "react";
 import { nanoid } from "nanoid";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { SignInButton, useUser } from "@clerk/nextjs";
 import type { Session } from "@/hooks/use-session";
 
 interface ParticipantJoinProps {
@@ -12,7 +13,10 @@ interface ParticipantJoinProps {
 }
 
 export function ParticipantJoin({ tableId, onJoined }: ParticipantJoinProps) {
-  const [name, setName] = useState("");
+  const { user, isSignedIn } = useUser();
+  const [name, setName] = useState(() =>
+    isSignedIn ? (user?.fullName ?? user?.firstName ?? "") : ""
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,6 +80,16 @@ export function ParticipantJoin({ tableId, onJoined }: ParticipantJoinProps) {
         >
           {loading ? "Joining…" : "Join table"}
         </Button>
+
+        {!isSignedIn && (
+          <div className="text-center">
+            <SignInButton mode="modal">
+              <button className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors underline underline-offset-2">
+                Sign in instead to save your bill history
+              </button>
+            </SignInButton>
+          </div>
+        )}
       </motion.div>
     </div>
   );

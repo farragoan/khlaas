@@ -1,8 +1,9 @@
 # PRD: Clerk Auth with Optional Guest Flow
 
 **Priority:** P0
-**Status:** Planned
-**Last updated:** 2026-04-25
+**Status:** Shipped ✓
+**Shipped:** 2026-04-26
+**Last updated:** 2026-04-26
 
 ---
 

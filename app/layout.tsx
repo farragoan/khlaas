@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -37,22 +38,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${geistSans.variable} h-full`}>
-      <body className="min-h-full flex flex-col antialiased">
-        {children}
-        <Toaster position="bottom-center" theme="dark" />
-        <footer className="py-3 text-center text-[11px] text-zinc-600">
-          <a
-            href="https://dhruvnagpal.in"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-zinc-400 transition-colors"
-          >
-            dhruvnagpal.in
-          </a>
-          {" "}™ All rights reserved.
-        </footer>
-      </body>
-    </html>
+    <ClerkProvider appearance={{ variables: { colorPrimary: "#fbbf24" } }}>
+      <html lang="en" className={`${geistSans.variable} h-full`}>
+        <body className="min-h-full flex flex-col antialiased">
+          {children}
+          <Toaster position="bottom-center" theme="dark" />
+          <footer className="py-3 text-center text-[11px] text-zinc-600">
+            <a
+              href="https://dhruvnagpal.in"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-zinc-400 transition-colors"
+            >
+              dhruvnagpal.in
+            </a>
+            {" "}™ All rights reserved.
+          </footer>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

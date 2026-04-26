@@ -34,17 +34,7 @@ Store `SHA-256(token)` in DB instead of raw token. DB leak no longer exposes usa
 
 ## P0 — Must ship
 
-### Clerk Auth with Optional Guest Flow
-**PRD:** `docs/PRDs/clerk-auth-guest-flow.md`
-
-Sign in with Clerk OR continue as a named guest — no forced gate. Authenticated users get `participants.user_id` populated for future bill history. Anonymous flow stays fully intact.
-- [ ] Install `@clerk/nextjs`, wrap layout with `ClerkProvider`
-- [ ] Middleware in passive mode (no route blocking in V1)
-- [ ] Home page: optional "Sign in" link alongside guest flow
-- [ ] `ParticipantJoin` modal: secondary "Sign in instead" option
-- [ ] `POST /api/participants`: set `user_id` from Clerk session if present
-- [ ] `participants.user_id` type: `uuid` → `text` (Clerk IDs are strings)
-- [ ] Env vars: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`
+_All P0 items shipped. See Shipped section below._
 
 ---
 
@@ -116,6 +106,12 @@ The share button currently shares a plain text list.
 ---
 
 ## Shipped
+
+### Clerk Auth with Optional Guest Flow ✓
+_Shipped: 2026-04-26_
+**PRD:** `docs/PRDs/clerk-auth-guest-flow.md`
+
+`@clerk/nextjs` installed, passive `clerkMiddleware`, `ClerkProvider` in layout, sign-in button on home, optional "Sign in instead" in `ParticipantJoin`, `participants.user_id` (text) populated from Clerk session.
 
 ### Post-Scan Share Sheet with QR Code ✓
 _Shipped: 2026-04-26_ · `ec3ec23`

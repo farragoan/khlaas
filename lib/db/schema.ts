@@ -65,7 +65,7 @@ export const participants = pgTable(
       .notNull()
       .references(() => splitTables.id, { onDelete: "cascade" }),
     displayName: text("display_name").notNull(),
-    userId: uuid("user_id"), // NULL in V1
+    userId: text("user_id"), // Clerk userId string (user_xxx...) or null for guests
     sessionToken: text("session_token"),
     joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow(),
   },

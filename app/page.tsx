@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, Loader2, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
+import { SignInButton, UserButton, useAuth } from "@clerk/nextjs";
 
 const LOCALE_CURRENCY: Record<string, string> = {
   "en-IN": "INR", "hi-IN": "INR", "hi": "INR",
@@ -40,6 +41,7 @@ function detectCurrency(): string {
 
 export default function Home() {
   const router = useRouter();
+  const { isSignedIn } = useAuth();
   const [creating, setCreating] = useState(false);
   const [currency, setCurrency] = useState(() => detectCurrency());
 
@@ -60,6 +62,19 @@ export default function Home() {
 
   return (
     <main className="flex flex-col items-center justify-center min-h-dvh px-6 bg-[#0F0F0F]">
+      {/* Auth bar */}
+      <div className="fixed top-4 right-4 z-10">
+        {isSignedIn ? (
+          <UserButton appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
+        ) : (
+          <SignInButton mode="modal">
+            <button className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-600">
+              Sign in
+            </button>
+          </SignInButton>
+        )}
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
