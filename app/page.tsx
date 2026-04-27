@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, Loader2, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
-import { SignInButton, UserButton, useAuth } from "@clerk/nextjs";
+import { SignInButton, UserButton, useAuth, useClerk } from "@clerk/nextjs";
 
 const LOCALE_CURRENCY: Record<string, string> = {
   "en-IN": "INR", "hi-IN": "INR", "hi": "INR",
@@ -42,10 +42,15 @@ function detectCurrency(): string {
 export default function Home() {
   const router = useRouter();
   const { isSignedIn } = useAuth();
+  const { openSignIn } = useClerk();
   const [creating, setCreating] = useState(false);
   const [currency, setCurrency] = useState(() => detectCurrency());
 
   async function handleStart() {
+    if (!isSignedIn) {
+      openSignIn();
+      return;
+    }
     setCreating(true);
     try {
       const res = await fetch("/api/tables", {
@@ -97,7 +102,7 @@ export default function Home() {
             ) : (
               <>
                 <Camera size={22} />
-                Scan a bill
+                {isSignedIn ? "Scan a bill" : "Sign in to scan a bill"}
               </>
             )}
           </button>
@@ -120,7 +125,7 @@ export default function Home() {
           </div>
         </div>
 
-        <p className="text-xs text-zinc-600">No account needed · Works on any phone</p>
+        <p className="text-xs text-zinc-600">Free account needed · Works on any phone</p>
       </motion.div>
     </main>
   );

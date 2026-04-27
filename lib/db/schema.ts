@@ -27,6 +27,7 @@ export const splitTables = pgTable(
     rawOcr: text("raw_ocr"), // JSONB stored as text for simplicity
     tip: numeric("tip", { precision: 10, scale: 2 }).default("0"),
     currency: text("currency").notNull().default("INR"),
+    createdBy: text("created_by"), // Clerk userId of the table creator
   },
   (t) => [
     uniqueIndex("idx_split_tables_share_code").on(t.shareCode),
