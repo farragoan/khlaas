@@ -87,7 +87,7 @@ export default function TablePage({
 
   const { table, items, participants, selections } = data;
   const activeSelections = localSelections ?? selections;
-  const isHost = participants[0]?.id === session?.participantId;
+  const isHost = !!session && participants[0]?.id === session.participantId;
   const isEditing = table.status === "editing";
 
   const billTotal = items.reduce((sum, i) => sum + parseFloat(i.totalPrice ?? "0"), 0);
