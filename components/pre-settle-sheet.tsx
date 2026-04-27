@@ -95,11 +95,33 @@ export function PreSettleSheet({ tableId, sessionToken, participants, billTotal,
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-white">Who paid?</h2>
           <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300 transition-colors">
             <X size={20} />
           </button>
+        </div>
+
+        {/* Bill total */}
+        <div className="flex justify-between items-center mb-5 px-1">
+          <span className="text-zinc-400 text-sm">Bill total</span>
+          <Price amount={billTotal} className="text-white font-semibold" />
+        </div>
+
+        {/* Tip row — first input */}
+        <div className="flex items-center gap-3 mb-5 pb-4 border-b border-zinc-800">
+          <span className="text-zinc-200 text-sm flex-1">Add tip</span>
+          <div className="flex items-center gap-1 bg-[var(--surface)] rounded-xl px-3 py-2">
+            <span className="text-zinc-400 text-sm">{currencySymbol}</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="0"
+              value={tip}
+              onChange={(e) => setTip(e.target.value)}
+              className="w-20 bg-transparent text-zinc-100 text-sm text-right outline-none"
+            />
+          </div>
         </div>
 
         {/* Per-participant payment inputs */}
@@ -123,22 +145,6 @@ export function PreSettleSheet({ tableId, sessionToken, participants, billTotal,
               </div>
             </div>
           ))}
-        </div>
-
-        {/* Tip row */}
-        <div className="flex items-center gap-3 mb-5 pt-3 border-t border-zinc-800">
-          <span className="text-zinc-400 text-sm flex-1">Tip</span>
-          <div className="flex items-center gap-1 bg-[var(--surface)] rounded-xl px-3 py-2">
-            <span className="text-zinc-400 text-sm">{currencySymbol}</span>
-            <input
-              type="text"
-              inputMode="decimal"
-              placeholder="0"
-              value={tip}
-              onChange={(e) => setTip(e.target.value)}
-              className="w-20 bg-transparent text-zinc-100 text-sm text-right outline-none"
-            />
-          </div>
         </div>
 
         {/* Running total vs bill */}

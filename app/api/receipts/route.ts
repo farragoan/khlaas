@@ -16,6 +16,7 @@ interface OcrItem {
 }
 
 interface OcrResult {
+  not_a_receipt?: boolean;
   items: OcrItem[];
   tax: number | null;
   service_charge: number | null;
@@ -27,7 +28,10 @@ const OCR_PROMPT = `You are a receipt OCR assistant. Extract all line items from
 
 IMPORTANT: Your entire response must be a single valid JSON object with no other text, no markdown, no code fences, no explanation.
 
-Return exactly this structure (use null for missing numeric fields, empty array for missing arrays):
+If the image is NOT a receipt, bill, or invoice, return exactly:
+{"not_a_receipt":true,"items":[],"tax":null,"service_charge":null,"other_fees":[],"total":null}
+
+If it IS a receipt, return exactly this structure (use null for missing numeric fields, empty array for missing arrays):
 {"items":[{"name":"Item Name","quantity":1,"unit_price":9.99}],"tax":1.50,"service_charge":null,"other_fees":[{"name":"Delivery","amount":2.00}],"total":13.49}`;
 
 function parseOcrJson(content: string): OcrResult {
@@ -155,7 +159,21 @@ export async function POST(req: Request) {
   try {
     ocr = await extractReceiptItems(imageBase64);
   } catch {
-    return NextResponse.json({ error: "Failed to process receipt" }, { status: 502 });
+    return NextResponse.json({ error: "Failed to process the image. Please try again." }, { status: 502 });
+  }
+
+  if (ocr.not_a_receipt) {
+    return NextResponse.json(
+      { error: "That doesn't look like a receipt. Please upload a clear photo of a bill." },
+      { status: 422 }
+    );
+  }
+
+  if (ocr.items.length === 0) {
+    return NextResponse.json(
+      { error: "Couldn't find any items on this receipt. Please try a clearer photo." },
+      { status: 422 }
+    );
   }
 
   // Build item rows

@@ -102,20 +102,6 @@ export default function TablePage({
     }
   }
 
-  async function handleCloseEdit() {
-    if (!session) return;
-    try {
-      const res = await fetch(`/api/tables/${shareCode}/close-edit`, {
-        method: "POST",
-        headers: { "x-session-token": session.sessionToken },
-      });
-      if (!res.ok) throw new Error("Failed");
-      refresh();
-    } catch {
-      toast.error("Couldn't close editing, try again");
-    }
-  }
-
   if (table.status === "settled") {
     router.replace(`/t/${shareCode}/settle`);
     return null;
@@ -137,20 +123,6 @@ export default function TablePage({
           Share
         </button>
       </div>
-
-      {/* Edit mode banner */}
-      {isEditing && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-2 mb-4 px-3 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30"
-        >
-          <Pencil size={14} className="text-[var(--brand)] flex-shrink-0" />
-          <p className="text-[var(--brand)] text-sm font-medium flex-1">
-            Edit mode — update selections before settling
-          </p>
-        </motion.div>
-      )}
 
       {/* Participants strip */}
       {participants.length > 0 && (
@@ -279,16 +251,7 @@ export default function TablePage({
       {/* Bottom bar */}
       {showItems && phase === "items" && isHost && (
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0F0F0F]/90 backdrop-blur-sm border-t border-zinc-800">
-          <div className="max-w-lg mx-auto space-y-2">
-            {isEditing && (
-              <button
-                onClick={handleCloseEdit}
-                className="w-full h-11 flex items-center justify-center gap-2 rounded-xl border border-zinc-700 text-zinc-300 text-sm font-medium hover:border-zinc-500 hover:text-zinc-100 active:scale-95 transition-all"
-              >
-                <Check size={16} />
-                Done editing
-              </button>
-            )}
+          <div className="max-w-lg mx-auto">
             <button
               onClick={() => setShowSettle(true)}
               className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all"
@@ -304,7 +267,7 @@ export default function TablePage({
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0F0F0F]/90 backdrop-blur-sm border-t border-zinc-800">
           <div className="max-w-lg mx-auto">
             <p className="text-center text-zinc-500 text-sm">
-              Waiting for {participants[0]?.displayName ?? "host"} to close editing…
+              Waiting for {participants[0]?.displayName ?? "host"} to settle up…
             </p>
           </div>
         </div>

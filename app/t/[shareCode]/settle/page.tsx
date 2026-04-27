@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Share2, ChevronLeft, RotateCcw, AlertTriangle } from "lucide-react";
@@ -256,6 +256,12 @@ export default function SettlePage({
   const [showReopenModal, setShowReopenModal] = useState(false);
   const [reopening, setReopening] = useState(false);
 
+  useEffect(() => {
+    if (!loading && data && data.table.status !== "settled") {
+      router.replace(`/t/${shareCode}`);
+    }
+  }, [data?.table?.status, loading]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (loading || !data) {
     return (
       <div className="min-h-dvh bg-[#0F0F0F] flex items-center justify-center">
@@ -268,8 +274,7 @@ export default function SettlePage({
   const tip = parseFloat(table.tip ?? "0");
   const isHost = participants[0]?.id === session?.participantId;
 
-  if (table.status !== "settled") {
-    router.replace(`/t/${shareCode}`);
+  if (data.table.status !== "settled") {
     return null;
   }
 

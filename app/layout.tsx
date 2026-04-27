@@ -40,20 +40,9 @@ export default function RootLayout({
   return (
     <ClerkProvider appearance={{ variables: { colorPrimary: "#fbbf24" } }}>
       <html lang="en" className={`${geistSans.variable} h-full`}>
-        <body className="min-h-full flex flex-col antialiased">
+        <body className="antialiased">
           {children}
           <Toaster position="bottom-center" theme="dark" />
-          <footer className="py-3 text-center text-[11px] text-zinc-600">
-            <a
-              href="https://dhruvnagpal.in"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-zinc-400 transition-colors"
-            >
-              dhruvnagpal.in
-            </a>
-            {" "}™ All rights reserved.
-          </footer>
         </body>
       </html>
     </ClerkProvider>

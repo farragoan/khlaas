@@ -48,9 +48,10 @@ export function ReceiptUpload({ tableId, sessionToken, onProcessed }: ReceiptUpl
       }
 
       onProcessed();
+      // Keep uploading=true so the processing state stays visible until the
+      // parent phase machine transitions away from this component
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to process receipt");
-    } finally {
       setUploading(false);
     }
   }
