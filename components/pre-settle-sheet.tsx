@@ -14,25 +14,44 @@ interface Props {
   sessionToken: string;
   participants: PublicParticipant[];
   billTotal: number;
+  initialTip?: number;
+  prefilledAmounts?: Record<string, number>;
   onSettled: () => void;
   onClose: () => void;
 }
 
-export function PreSettleSheet({ tableId, sessionToken, participants, billTotal, onSettled, onClose }: Props) {
+export function PreSettleSheet({
+  tableId,
+  sessionToken,
+  participants,
+  billTotal,
+  initialTip,
+  prefilledAmounts,
+  onSettled,
+  onClose,
+}: Props) {
   const currency = useCurrency();
   const currencySymbol = getCurrencySymbol(currency);
 
   const [amounts, setAmounts] = useState<Record<string, string>>(() =>
-    Object.fromEntries(participants.map((p) => [p.id, ""]))
+    Object.fromEntries(
+      participants.map((p) => [
+        p.id,
+        prefilledAmounts?.[p.id] != null
+          ? String(prefilledAmounts[p.id])
+          : "",
+      ])
+    )
   );
-  const [tip, setTip] = useState("");
+  const [tip, setTip] = useState(initialTip != null ? String(initialTip) : "");
   const [submitting, setSubmitting] = useState(false);
 
   const tipAmount = parseLocalizedNumber(tip || "0");
 
-  const totalEntered = participants.reduce((sum, p) => {
-    return sum + parseLocalizedNumber(amounts[p.id] || "0");
-  }, 0) + tipAmount;
+  const totalEntered =
+    participants.reduce((sum, p) => {
+      return sum + parseLocalizedNumber(amounts[p.id] || "0");
+    }, 0) + tipAmount;
 
   const totalWithTip = billTotal + tipAmount;
   const mismatch = totalEntered > 0.5 && Math.abs(totalEntered - totalWithTip) > 0.5;
@@ -49,7 +68,6 @@ export function PreSettleSheet({ tableId, sessionToken, participants, billTotal,
 
     setSubmitting(true);
     try {
-      // Save all non-zero payments in parallel
       await Promise.all(
         paymentEntries.map((e) =>
           fetch("/api/payments", {
@@ -62,7 +80,6 @@ export function PreSettleSheet({ tableId, sessionToken, participants, billTotal,
         )
       );
 
-      // Compute ledger with tip
       const res = await fetch("/api/ledger/compute", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-session-token": sessionToken },
@@ -108,7 +125,7 @@ export function PreSettleSheet({ tableId, sessionToken, participants, billTotal,
           <Price amount={billTotal} className="text-white font-semibold" />
         </div>
 
-        {/* Tip row — first input */}
+        {/* Tip row */}
         <div className="flex items-center gap-3 mb-5 pb-4 border-b border-zinc-800">
           <span className="text-zinc-200 text-sm flex-1">Add tip</span>
           <div className="flex items-center gap-1 bg-[var(--surface)] rounded-xl px-3 py-2">

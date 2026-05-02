@@ -8,6 +8,7 @@ export const JoinParticipantSchema = z.object({
   tableId: z.string().uuid(),
   displayName: z.string().min(1).max(50),
   sessionToken: z.string().min(1),
+  upiId: z.string().max(50).optional(),
 });
 
 export const AddSelectionSchema = z.object({

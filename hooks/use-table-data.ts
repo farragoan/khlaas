@@ -9,7 +9,7 @@ export interface Selection {
 }
 
 // sessionToken is never returned by the API — omit it from the client-side type
-export type PublicParticipant = Omit<Participant, "sessionToken">;
+export type PublicParticipant = Omit<Participant, "sessionToken"> & { upiId: string | null };
 
 export interface TableData {
   table: SplitTable;
@@ -38,12 +38,6 @@ export function useTableData(shareCode: string) {
       const json: TableData = await res.json();
       setData(json);
       setError(null);
-
-      // Stop polling once settled
-      if (json.table.status === "settled" && intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
     } catch {
       setError("Failed to load table");
     } finally {

@@ -17,6 +17,7 @@ export function ParticipantJoin({ tableId, onJoined }: ParticipantJoinProps) {
   const [name, setName] = useState(() =>
     isSignedIn ? (user?.fullName ?? user?.firstName ?? "") : ""
   );
+  const [upiId, setUpiId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,7 +34,7 @@ export function ParticipantJoin({ tableId, onJoined }: ParticipantJoinProps) {
       const res = await fetch("/api/participants", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tableId, displayName: trimmed, sessionToken }),
+        body: JSON.stringify({ tableId, displayName: trimmed, sessionToken, upiId: upiId.trim() || undefined }),
       });
 
       if (!res.ok) throw new Error("Failed to join");
@@ -68,6 +69,16 @@ export function ParticipantJoin({ tableId, onJoined }: ParticipantJoinProps) {
           placeholder="Your name"
           maxLength={50}
           autoFocus
+          className="w-full bg-[var(--surface-raised)] text-white placeholder-zinc-500 rounded-xl px-4 py-3 text-base outline-none focus:ring-2 focus:ring-[var(--brand)]"
+        />
+
+        <input
+          type="text"
+          value={upiId}
+          onChange={(e) => setUpiId(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleJoin()}
+          placeholder="UPI ID (optional, e.g. name@bank)"
+          maxLength={50}
           className="w-full bg-[var(--surface-raised)] text-white placeholder-zinc-500 rounded-xl px-4 py-3 text-base outline-none focus:ring-2 focus:ring-[var(--brand)]"
         />
 

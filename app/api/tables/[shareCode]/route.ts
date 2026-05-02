@@ -27,6 +27,7 @@ export async function GET(
         tableId: participants.tableId,
         displayName: participants.displayName,
         userId: participants.userId,
+        upiId: participants.upiId,
         joinedAt: participants.joinedAt,
       })
       .from(participants)

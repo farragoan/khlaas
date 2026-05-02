@@ -9,14 +9,16 @@ interface ReceiptUploadProps {
   tableId: string;
   sessionToken: string;
   onProcessed: () => void;
+  onUploadStarted?: () => void;
 }
 
-export function ReceiptUpload({ tableId, sessionToken, onProcessed }: ReceiptUploadProps) {
+export function ReceiptUpload({ tableId, sessionToken, onProcessed, onUploadStarted }: ReceiptUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
   async function handleFile(file: File) {
     setUploading(true);
+    onUploadStarted?.();
 
     try {
       // Convert to base64

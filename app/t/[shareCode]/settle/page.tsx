@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Share2, ChevronLeft, RotateCcw, AlertTriangle } from "lucide-react";
+import { Share2, ChevronLeft, RotateCcw, AlertTriangle, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { useTableData } from "@/hooks/use-table-data";
 import { useSession } from "@/hooks/use-session";
@@ -380,24 +380,40 @@ export default function SettlePage({
         {ledger.length > 0 && (
           <div className="space-y-3">
             <p className="text-xs text-zinc-500 uppercase tracking-wider px-1">Transfers needed</p>
-            {ledger.map((entry, i) => (
-              <motion.div
-                key={entry.id}
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 + i * 0.08 }}
-                className="flex items-center gap-2 px-4 py-3 bg-[var(--surface-raised)] rounded-xl text-sm"
-              >
-                <span className="font-medium text-zinc-200">
-                  {participantName(entry.fromParticipant, participants)}
-                </span>
-                <span className="text-zinc-500">pays</span>
-                <span className="font-medium text-zinc-200">
-                  {participantName(entry.toParticipant, participants)}
-                </span>
-                <Price amount={entry.amount} className="ml-auto text-[var(--brand)]" />
-              </motion.div>
-            ))}
+            {ledger.map((entry, i) => {
+              const recipient = participants.find((p) => p.id === entry.toParticipant);
+              const recipientUpiId = recipient?.upiId;
+              const upiHref = recipientUpiId
+                ? `upi://pay?pa=${encodeURIComponent(recipientUpiId)}&pn=${encodeURIComponent(recipient?.displayName ?? "")}&am=${parseFloat(entry.amount).toFixed(2)}&cu=${table.currency ?? "INR"}`
+                : null;
+              return (
+                <motion.div
+                  key={entry.id}
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 + i * 0.08 }}
+                  className="flex items-center gap-2 px-4 py-3 bg-[var(--surface-raised)] rounded-xl text-sm"
+                >
+                  <span className="font-medium text-zinc-200">
+                    {participantName(entry.fromParticipant, participants)}
+                  </span>
+                  <span className="text-zinc-500">pays</span>
+                  <span className="font-medium text-zinc-200">
+                    {participantName(entry.toParticipant, participants)}
+                  </span>
+                  <Price amount={entry.amount} className="ml-auto text-[var(--brand)]" />
+                  {upiHref && session?.participantId === entry.fromParticipant && (
+                    <a
+                      href={upiHref}
+                      className="flex items-center gap-1 ml-2 px-2.5 py-1 bg-[var(--brand)] text-black text-xs font-semibold rounded-lg active:scale-95 transition-transform flex-shrink-0"
+                    >
+                      <Smartphone size={12} />
+                      Pay
+                    </a>
+                  )}
+                </motion.div>
+              );
+            })}
           </div>
         )}
 

@@ -12,14 +12,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { tableId, displayName, sessionToken } = parsed.data;
+  const { tableId, displayName, sessionToken, upiId } = parsed.data;
 
   // Attach Clerk userId if the request comes from a signed-in user
   const { userId } = await auth();
 
   const [participant] = await db
     .insert(participants)
-    .values({ tableId, displayName, sessionToken, userId: userId ?? null })
+    .values({ tableId, displayName, sessionToken, upiId: upiId ?? null, userId: userId ?? null })
     .returning();
 
   return NextResponse.json(

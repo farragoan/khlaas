@@ -68,6 +68,7 @@ export const participants = pgTable(
     displayName: text("display_name").notNull(),
     userId: text("user_id"), // Clerk userId string (user_xxx...) or null for guests
     sessionToken: text("session_token"),
+    upiId: text("upi_id"),
     joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow(),
   },
   (t) => [index("idx_participants_table_id").on(t.tableId)]
