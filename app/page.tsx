@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Loader2, ChevronDown } from "lucide-react";
+import { Camera, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { SignInButton, UserButton, useAuth, useClerk } from "@clerk/nextjs";
+import { useState } from "react";
 
 const LOCALE_CURRENCY: Record<string, string> = {
   "en-IN": "INR", "hi-IN": "INR", "hi": "INR",
@@ -20,20 +20,6 @@ const LOCALE_CURRENCY: Record<string, string> = {
   "pt-BR": "BRL",
 };
 
-const CURRENCY_OPTIONS = [
-  { code: "INR", label: "₹ INR — Indian Rupee" },
-  { code: "USD", label: "$ USD — US Dollar" },
-  { code: "EUR", label: "€ EUR — Euro" },
-  { code: "GBP", label: "£ GBP — British Pound" },
-  { code: "AED", label: "د.إ AED — UAE Dirham" },
-  { code: "SGD", label: "S$ SGD — Singapore Dollar" },
-  { code: "JPY", label: "¥ JPY — Japanese Yen" },
-  { code: "AUD", label: "A$ AUD — Australian Dollar" },
-  { code: "CAD", label: "C$ CAD — Canadian Dollar" },
-  { code: "BRL", label: "R$ BRL — Brazilian Real" },
-  { code: "CNY", label: "¥ CNY — Chinese Yuan" },
-];
-
 function detectCurrency(): string {
   const lang = typeof navigator !== "undefined" ? navigator.language : "en-IN";
   return LOCALE_CURRENCY[lang] ?? LOCALE_CURRENCY[lang.split("-")[0]] ?? "INR";
@@ -44,7 +30,6 @@ export default function Home() {
   const { isSignedIn } = useAuth();
   const { openSignIn } = useClerk();
   const [creating, setCreating] = useState(false);
-  const [currency, setCurrency] = useState(() => detectCurrency());
 
   async function handleStart() {
     if (!isSignedIn) {
@@ -56,7 +41,7 @@ export default function Home() {
       const res = await fetch("/api/tables", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currency }),
+        body: JSON.stringify({ currency: detectCurrency() }),
       });
       const { shareCode } = await res.json();
       router.push(`/t/${shareCode}`);
@@ -91,7 +76,7 @@ export default function Home() {
           <p className="text-zinc-400 text-sm mt-2">Split bills, not friendships</p>
         </div>
 
-        <div className="w-full space-y-3">
+        <div className="w-full">
           <button
             onClick={handleStart}
             disabled={creating}
@@ -106,23 +91,6 @@ export default function Home() {
               </>
             )}
           </button>
-
-          {/* Currency selector */}
-          <div className="relative">
-            <select
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              disabled={creating}
-              className="w-full h-10 bg-[var(--surface)] text-zinc-300 text-sm rounded-xl px-3 pr-8 appearance-none outline-none border border-zinc-800 focus:border-zinc-600 transition-colors disabled:opacity-50"
-            >
-              {CURRENCY_OPTIONS.map((opt) => (
-                <option key={opt.code} value={opt.code}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
-          </div>
         </div>
 
         <p className="text-xs text-zinc-600">Free account needed · Works on any phone</p>

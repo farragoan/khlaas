@@ -17,10 +17,18 @@ export async function POST(req: Request) {
   // Attach Clerk userId if the request comes from a signed-in user
   const { userId } = await auth();
 
-  const [participant] = await db
+  const participantRows = await db
     .insert(participants)
     .values({ tableId, displayName, sessionToken, upiId: upiId ?? null, userId: userId ?? null })
-    .returning();
+    .returning()
+    .catch(() =>
+      // upi_id column not yet migrated — insert without it
+      db
+        .insert(participants)
+        .values({ tableId, displayName, sessionToken, userId: userId ?? null })
+        .returning()
+    );
+  const [participant] = participantRows;
 
   return NextResponse.json(
     { participantId: participant.id, displayName: participant.displayName },

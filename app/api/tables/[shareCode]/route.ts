@@ -31,7 +31,21 @@ export async function GET(
         joinedAt: participants.joinedAt,
       })
       .from(participants)
-      .where(eq(participants.tableId, table.id)),
+      .where(eq(participants.tableId, table.id))
+      .catch(() =>
+        // upi_id column not yet migrated — fall back without it
+        db
+          .select({
+            id: participants.id,
+            tableId: participants.tableId,
+            displayName: participants.displayName,
+            userId: participants.userId,
+            joinedAt: participants.joinedAt,
+          })
+          .from(participants)
+          .where(eq(participants.tableId, table.id))
+          .then((rows) => rows.map((r) => ({ ...r, upiId: null as string | null })))
+      ),
   ]);
 
   const [tableSelections, tablePayments, tableLedger] = await Promise.all([
