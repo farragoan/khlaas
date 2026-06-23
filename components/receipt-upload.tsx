@@ -15,13 +15,15 @@ interface ReceiptUploadProps {
 export function ReceiptUpload({ tableId, sessionToken, onProcessed, onUploadStarted }: ReceiptUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const processingRef = useRef(false);
 
   async function handleFile(file: File) {
+    if (processingRef.current) return;
+    processingRef.current = true;
     setUploading(true);
     onUploadStarted?.();
 
     try {
-      // Convert to base64
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
@@ -40,21 +42,16 @@ export function ReceiptUpload({ tableId, sessionToken, onProcessed, onUploadStar
 
       if (!res.ok) {
         let message = "Upload failed";
-        try {
-          const body = await res.json();
-          message = body.error ?? message;
-        } catch {
-          // server returned non-JSON (e.g. plain-text 500)
-        }
+        try { const body = await res.json(); message = body.error ?? message; } catch {}
         throw new Error(message);
       }
 
       onProcessed();
-      // Keep uploading=true so the processing state stays visible until the
-      // parent phase machine transitions away from this component
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to process receipt");
       setUploading(false);
+    } finally {
+      processingRef.current = false;
     }
   }
 
@@ -67,10 +64,10 @@ export function ReceiptUpload({ tableId, sessionToken, onProcessed, onUploadStar
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
+          e.target.value = "";
           if (file) handleFile(file);
         }}
       />
-
       <Button
         onClick={() => inputRef.current?.click()}
         disabled={uploading}
@@ -79,7 +76,6 @@ export function ReceiptUpload({ tableId, sessionToken, onProcessed, onUploadStar
         <Camera size={20} />
         {uploading ? "Processing receipt…" : "Scan receipt"}
       </Button>
-
       {uploading && (
         <p className="text-sm text-zinc-400 text-center animate-pulse">
           Reading your bill, this takes a few seconds…
