@@ -48,8 +48,20 @@ export function useTableData(shareCode: string) {
   useEffect(() => {
     fetch_();
     intervalRef.current = setInterval(fetch_, POLL_INTERVAL);
+
+    function handleVisibility() {
+      if (document.hidden) {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+      } else {
+        fetch_();
+        intervalRef.current = setInterval(fetch_, POLL_INTERVAL);
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [fetch_]);
 

@@ -37,11 +37,17 @@ export function ItemList({
   // The participant whose selections we're viewing/editing
   const activeParticipantId = editingParticipantId ?? session.participantId;
 
-  // Sync external selections (from polling) into local state
+  // Count of in-flight toggle requests — poll must not overwrite while pending
+  const pendingRef = useRef(0);
+
+  // Sync external selections (from polling) into local state, but skip if a
+  // toggle is still in flight to avoid clobbering the optimistic update
   const latestExternal = useRef(selections);
   useEffect(() => {
     latestExternal.current = selections;
-    setLocalSelections(selections);
+    if (pendingRef.current === 0) {
+      setLocalSelections(selections);
+    }
   }, [selections]);
 
   const regularItems = items.filter((i) => !i.isFee).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
@@ -77,6 +83,7 @@ export function ItemList({
       onSelectionsChange(next);
     }
 
+    pendingRef.current++;
     try {
       const res = await fetch("/api/selections", {
         method: selected ? "DELETE" : "POST",
@@ -93,6 +100,13 @@ export function ItemList({
       setLocalSelections(prev);
       onSelectionsChange(prev);
       toast.error("Couldn't update selection, try again");
+    } finally {
+      pendingRef.current--;
+      // Sync any poll that arrived while the request was in flight
+      if (pendingRef.current === 0) {
+        setLocalSelections(latestExternal.current);
+        onSelectionsChange(latestExternal.current);
+      }
     }
   }
 

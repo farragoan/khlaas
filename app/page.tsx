@@ -30,6 +30,7 @@ export default function Home() {
   const { isSignedIn } = useAuth();
   const { openSignIn } = useClerk();
   const [creating, setCreating] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
 
   async function handleStart() {
     if (!isSignedIn) {
@@ -37,15 +38,18 @@ export default function Home() {
       return;
     }
     setCreating(true);
+    setStartError(null);
     try {
       const res = await fetch("/api/tables", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currency: detectCurrency() }),
       });
+      if (!res.ok) throw new Error("Failed to create bill");
       const { shareCode } = await res.json();
       router.push(`/t/${shareCode}`);
     } catch {
+      setStartError("Couldn't start a bill. Please try again.");
       setCreating(false);
     }
   }
@@ -93,6 +97,7 @@ export default function Home() {
           </button>
         </div>
 
+        {startError && <p className="text-sm text-red-400">{startError}</p>}
         <p className="text-xs text-zinc-600">Free account needed · Works on any phone</p>
       </motion.div>
     </main>
