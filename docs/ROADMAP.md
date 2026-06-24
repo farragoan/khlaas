@@ -85,10 +85,12 @@ The share button currently shares a plain text list.
 - [ ] Deep link per person: "Dhruv, you owe ₹304 — tap to see details"
 - [ ] WhatsApp / UPI intent support
 
-### Expiry & Cleanup
+### Expiry & Cleanup ✓
+_Shipped: 2026-06-24_
+
 `split_tables.expires_at` is set but never enforced.
-- [ ] Cron job (Netlify scheduled function) to mark tables expired after 24h
-- [ ] Expired tables show a tombstone page
+- [x] Cron job (Netlify scheduled function) to mark tables expired after 24h
+- [x] Expired tables show a tombstone page
 
 ---
 

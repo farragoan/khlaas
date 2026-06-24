@@ -3,7 +3,7 @@
 import { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Share2, Loader2, Users, Pencil, Check } from "lucide-react";
+import { Share2, Loader2, Users, Pencil, Check, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useTableData } from "@/hooks/use-table-data";
 import { useSession } from "@/hooks/use-session";
@@ -240,6 +240,26 @@ export default function TablePage({
     } else {
       setShowSettle(true);
     }
+  }
+
+  if (table.status === "expired") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-dvh bg-[#0F0F0F] px-6 text-center gap-4">
+        <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center">
+          <Clock size={28} className="text-zinc-400" />
+        </div>
+        <div className="space-y-1">
+          <h2 className="text-white font-semibold text-lg">This bill has expired</h2>
+          <p className="text-zinc-500 text-sm">Bills are automatically cleared after 24 hours.</p>
+        </div>
+        <a
+          href="/"
+          className="mt-2 px-6 py-3 bg-[var(--brand)] text-black font-semibold rounded-2xl text-sm"
+        >
+          Start a new bill
+        </a>
+      </div>
+    );
   }
 
   if (table.status === "settled") {

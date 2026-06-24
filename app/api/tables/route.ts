@@ -17,9 +17,11 @@ export async function POST(req: Request) {
 
   const shareCode = nanoid(8);
 
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
   const [table] = await db
     .insert(splitTables)
-    .values({ shareCode, currency, createdBy: userId })
+    .values({ shareCode, currency, createdBy: userId, expiresAt })
     .returning();
 
   return NextResponse.json({ tableId: table.id, shareCode: table.shareCode }, { status: 201 });
