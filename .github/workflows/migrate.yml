@@ -12,12 +12,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check DATABASE_URL
+        run: |
+          if [ -z "${{ secrets.DATABASE_URL }}" ]; then
+            echo "::error::DATABASE_URL secret is not set"
+            exit 1
+          fi
+
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
+          cache: pnpm
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
 
       - run: npx drizzle-kit migrate
         env:

@@ -1,8 +1,7 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useState, lazy } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
 import { Share2, ChevronLeft, RotateCcw, AlertTriangle, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { useTableData } from "@/hooks/use-table-data";
@@ -11,6 +10,13 @@ import { Price } from "@/components/price";
 import { CurrencyProvider } from "@/lib/currency-context";
 import type { LedgerEntry, Payment, Item } from "@/lib/db/schema";
 import type { Selection, PublicParticipant } from "@/hooks/use-table-data";
+
+const MotionDiv = lazy(() =>
+  import("framer-motion").then((m) => ({ default: m.motion.div }))
+);
+const AnimatePresenceLazy = lazy(() =>
+  import("framer-motion").then((m) => ({ default: m.AnimatePresence }))
+);
 
 function participantName(id: string, participants: PublicParticipant[]) {
   return participants.find((p) => p.id === id)?.displayName ?? "Unknown";
@@ -65,7 +71,7 @@ function PersonDetail({
   const net = totalOwed - paid;
 
   return (
-    <motion.div
+    <MotionDiv
       initial={{ x: "100%" }}
       animate={{ x: 0 }}
       exit={{ x: "100%" }}
@@ -139,7 +145,7 @@ function PersonDetail({
           )}
         </div>
       </div>
-    </motion.div>
+    </MotionDiv>
   );
 }
 
@@ -161,27 +167,30 @@ function PersonTotal({
   const net = totalOwed - totalReceives;
 
   return (
-    <motion.button
+    <MotionDiv
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.08, type: "spring", damping: 20 }}
-      onClick={onClick}
-      className="w-full flex items-center justify-between px-4 py-4 bg-[var(--surface)] rounded-xl active:scale-[0.98] transition-transform text-left"
     >
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full bg-zinc-700 flex items-center justify-center text-sm font-bold text-zinc-200">
-          {participant.displayName[0].toUpperCase()}
+      <button
+        onClick={onClick}
+        className="w-full flex items-center justify-between px-4 py-4 bg-[var(--surface)] rounded-xl active:scale-[0.98] transition-transform text-left"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-zinc-700 flex items-center justify-center text-sm font-bold text-zinc-200">
+            {participant.displayName[0].toUpperCase()}
+          </div>
+          <div>
+            <span className="font-medium text-zinc-100 block">{participant.displayName}</span>
+            <span className="text-xs text-zinc-500">Tap for breakdown</span>
+          </div>
         </div>
-        <div>
-          <span className="font-medium text-zinc-100 block">{participant.displayName}</span>
-          <span className="text-xs text-zinc-500">Tap for breakdown</span>
-        </div>
-      </div>
-      <Price
-        amount={Math.abs(net)}
-        className={`text-base font-semibold ${net > 0.005 ? "text-[var(--danger)]" : "text-[var(--selected)]"}`}
-      />
-    </motion.button>
+        <Price
+          amount={Math.abs(net)}
+          className={`text-base font-semibold ${net > 0.005 ? "text-[var(--danger)]" : "text-[var(--selected)]"}`}
+        />
+      </button>
+    </MotionDiv>
   );
 }
 
@@ -197,14 +206,14 @@ function ReopenConfirmModal({
   loading: boolean;
 }) {
   return (
-    <motion.div
+    <MotionDiv
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center"
       onClick={onCancel}
     >
-      <motion.div
+      <MotionDiv
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
@@ -238,8 +247,8 @@ function ReopenConfirmModal({
             Cancel
           </button>
         </div>
-      </motion.div>
-    </motion.div>
+      </MotionDiv>
+    </MotionDiv>
   );
 }
 
@@ -303,7 +312,6 @@ export default function SettlePage({
         headers: { "x-session-token": session.sessionToken },
       });
       if (!res.ok) throw new Error("Failed");
-      // The settle page will auto-redirect to /t/[shareCode] as status changes
       router.replace(`/t/${shareCode}`);
     } catch {
       toast.error("Couldn't reopen the bill, try again");
@@ -334,13 +342,13 @@ export default function SettlePage({
           </button>
         </div>
 
-        <motion.h2
+        <MotionDiv
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-2xl font-bold text-white mb-2"
         >
           All settled ✓
-        </motion.h2>
+        </MotionDiv>
         <p className="text-zinc-400 text-sm mb-6">Tap a person to see their breakdown</p>
 
         {/* Paid by */}
@@ -387,7 +395,7 @@ export default function SettlePage({
                 ? `upi://pay?pa=${encodeURIComponent(recipientUpiId)}&pn=${encodeURIComponent(recipient?.displayName ?? "")}&am=${parseFloat(entry.amount).toFixed(2)}&cu=${table.currency ?? "INR"}`
                 : null;
               return (
-                <motion.div
+                <MotionDiv
                   key={entry.id}
                   initial={{ opacity: 0, x: -12 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -411,26 +419,26 @@ export default function SettlePage({
                       Pay
                     </a>
                   )}
-                </motion.div>
+                </MotionDiv>
               );
             })}
           </div>
         )}
 
         {ledger.length === 0 && (
-          <motion.p
+          <MotionDiv
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
             className="text-zinc-500 text-center py-8"
           >
             Everyone&apos;s even — no transfers needed
-          </motion.p>
+          </MotionDiv>
         )}
 
         {/* Re-open bill (host only) */}
         {isHost && (
-          <motion.div
+          <MotionDiv
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
@@ -443,12 +451,12 @@ export default function SettlePage({
               <RotateCcw size={14} />
               Re-open bill
             </button>
-          </motion.div>
+          </MotionDiv>
         )}
       </main>
 
       {/* Per-person detail panel */}
-      <AnimatePresence>
+      <AnimatePresenceLazy>
         {detailParticipant && (
           <PersonDetail
             participant={detailParticipant}
@@ -459,10 +467,10 @@ export default function SettlePage({
             onClose={() => setDetailParticipant(null)}
           />
         )}
-      </AnimatePresence>
+      </AnimatePresenceLazy>
 
       {/* Reopen confirmation modal */}
-      <AnimatePresence>
+      <AnimatePresenceLazy>
         {showReopenModal && (
           <ReopenConfirmModal
             hostName={participants[0]?.displayName ?? "You"}
@@ -471,7 +479,7 @@ export default function SettlePage({
             loading={reopening}
           />
         )}
-      </AnimatePresence>
+      </AnimatePresenceLazy>
     </>
     </CurrencyProvider>
   );

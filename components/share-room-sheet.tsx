@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { motion } from "framer-motion";
 import { Copy, Share2, ArrowRight, Check } from "lucide-react";
 import { toast } from "sonner";
-import { QRCodeSVG } from "qrcode.react";
 import type { PublicParticipant } from "@/hooks/use-table-data";
+
+const QRCodeSVG = lazy(() =>
+  import("qrcode.react").then((m) => ({ default: m.QRCodeSVG }))
+);
 
 interface ShareRoomSheetProps {
   shareCode: string;
@@ -57,13 +60,15 @@ export function ShareRoomSheet({ shareCode, participants, onContinue }: ShareRoo
           transition={{ delay: 0.1, duration: 0.4 }}
           className="rounded-2xl overflow-hidden mb-5 p-3 bg-[#0F0F0F] border border-zinc-800"
         >
-          <QRCodeSVG
-            value={roomUrl}
-            size={200}
-            fgColor="#fbbf24"
-            bgColor="#0F0F0F"
-            level="M"
-          />
+          <Suspense fallback={<div className="w-[200px] h-[200px] bg-zinc-800 rounded" />}>
+            <QRCodeSVG
+              value={roomUrl}
+              size={200}
+              fgColor="#fbbf24"
+              bgColor="#0F0F0F"
+              level="M"
+            />
+          </Suspense>
         </motion.div>
       )}
 

@@ -3,6 +3,7 @@ import { db } from "@/lib/db/client";
 import { selections, participants, items, splitTables } from "@/lib/db/schema";
 import { AddSelectionSchema, RemoveSelectionSchema } from "@/lib/schemas";
 import { eq, and, asc } from "drizzle-orm";
+import { hashToken } from "@/lib/auth";
 
 /**
  * Validate that the session is allowed to write a selection for `participantId` on `itemId`.
@@ -16,6 +17,8 @@ async function validateSession(
   sessionToken: string,
   itemId: string
 ): Promise<boolean> {
+  const hashedToken = hashToken(sessionToken);
+
   // Fast path: direct match
   const [direct] = await db
     .select({ id: participants.id })
@@ -23,7 +26,7 @@ async function validateSession(
     .where(
       and(
         eq(participants.id, participantId),
-        eq(participants.sessionToken, sessionToken)
+        eq(participants.sessionToken, hashedToken)
       )
     )
     .limit(1);
@@ -52,7 +55,7 @@ async function validateSession(
     .where(
       and(
         eq(participants.tableId, item.tableId),
-        eq(participants.sessionToken, sessionToken)
+        eq(participants.sessionToken, hashedToken)
       )
     )
     .limit(1);

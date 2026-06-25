@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db/client";
 import { participants } from "@/lib/db/schema";
 import { JoinParticipantSchema } from "@/lib/schemas";
+import { hashToken } from "@/lib/auth";
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -13,19 +14,20 @@ export async function POST(req: Request) {
   }
 
   const { tableId, displayName, sessionToken, upiId } = parsed.data;
+  const hashedToken = hashToken(sessionToken);
 
   // Attach Clerk userId if the request comes from a signed-in user
   const { userId } = await auth();
 
   const participantRows = await db
     .insert(participants)
-    .values({ tableId, displayName, sessionToken, upiId: upiId ?? null, userId: userId ?? null })
+    .values({ tableId, displayName, sessionToken: hashedToken, upiId: upiId ?? null, userId: userId ?? null })
     .returning()
     .catch(() =>
       // upi_id column not yet migrated — insert without it
       db
         .insert(participants)
-        .values({ tableId, displayName, sessionToken, userId: userId ?? null })
+        .values({ tableId, displayName, sessionToken: hashedToken, userId: userId ?? null })
         .returning()
     );
   const [participant] = participantRows;

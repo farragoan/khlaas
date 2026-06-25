@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { splitTables, participants, ledgerEntries, payments } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
+import { hashToken } from "@/lib/auth";
 
 export async function POST(
   req: Request,
@@ -36,7 +37,7 @@ export async function POST(
     .orderBy(asc(participants.joinedAt))
     .limit(1);
 
-  if (!host || host.sessionToken !== sessionToken) {
+  if (!host || host.sessionToken !== hashToken(sessionToken)) {
     return NextResponse.json({ error: "Only the host can reopen a bill" }, { status: 403 });
   }
 

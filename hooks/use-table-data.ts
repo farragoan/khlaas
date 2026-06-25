@@ -8,7 +8,6 @@ export interface Selection {
   itemId: string;
 }
 
-// sessionToken is never returned by the API — omit it from the client-side type
 export type PublicParticipant = Omit<Participant, "sessionToken"> & { upiId: string | null };
 
 export interface TableData {
@@ -20,13 +19,22 @@ export interface TableData {
   ledger: LedgerEntry[];
 }
 
-const POLL_INTERVAL = 2000;
+const MIN_INTERVAL = 2000;
+const MAX_INTERVAL = 10000;
+const STEP = 1000;
 
 export function useTableData(shareCode: string) {
   const [data, setData] = useState<TableData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollRef = useRef(MIN_INTERVAL);
+  const lastUpdateRef = useRef(Date.now());
+
+  const scheduleNext = useCallback(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(fetch_, pollRef.current);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetch_ = useCallback(async () => {
     try {
@@ -36,6 +44,24 @@ export function useTableData(shareCode: string) {
         return;
       }
       const json: TableData = await res.json();
+      const now = Date.now();
+      const prevJson = data;
+      const changed =
+        !prevJson ||
+        json.table.status !== prevJson.table.status ||
+        json.participants.length !== prevJson.participants.length ||
+        json.items.length !== prevJson.items.length ||
+        json.selections.length !== prevJson.selections.length ||
+        json.payments.length !== prevJson.payments.length ||
+        json.ledger.length !== prevJson.ledger.length;
+
+      if (changed) {
+        pollRef.current = MIN_INTERVAL;
+        lastUpdateRef.current = now;
+      } else {
+        pollRef.current = Math.min(pollRef.current + STEP, MAX_INTERVAL);
+      }
+
       setData(json);
       setError(null);
     } catch {
@@ -43,18 +69,20 @@ export function useTableData(shareCode: string) {
     } finally {
       setLoading(false);
     }
-  }, [shareCode]);
+  }, [shareCode, data]);
 
   useEffect(() => {
     fetch_();
-    intervalRef.current = setInterval(fetch_, POLL_INTERVAL);
+    scheduleNext();
 
     function handleVisibility() {
       if (document.hidden) {
         if (intervalRef.current) clearInterval(intervalRef.current);
       } else {
+        pollRef.current = MIN_INTERVAL;
+        lastUpdateRef.current = Date.now();
         fetch_();
-        intervalRef.current = setInterval(fetch_, POLL_INTERVAL);
+        scheduleNext();
       }
     }
     document.addEventListener("visibilitychange", handleVisibility);
@@ -63,7 +91,7 @@ export function useTableData(shareCode: string) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [fetch_]);
+  }, [fetch_, scheduleNext]);
 
   return { data, error, loading, refresh: fetch_ };
 }
