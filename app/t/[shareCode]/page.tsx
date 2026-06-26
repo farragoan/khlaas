@@ -372,6 +372,22 @@ export default function TablePage({
     }
   }, [isSignedIn, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Fetch user's UPI ID from profile (must be before early returns — Rules of Hooks)
+  useEffect(() => {
+    const hostParticipant = data?.participants?.[0];
+    const isUserHost = !!session && !!hostParticipant && hostParticipant.id === session.participantId;
+    if (isUserHost) {
+      fetch("/api/user-profile")
+        .then((res) => res.json())
+        .then((profile) => {
+          if (profile?.upiId) {
+            setHostUpiId(profile.upiId);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [data, session]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-dvh bg-[#0F0F0F]">
@@ -406,23 +422,6 @@ export default function TablePage({
     (p) => !paymentMap.get(p.id) || paymentMap.get(p.id)! <= 0
   );
   const canSettle = unselectedItems.length === 0 && missingPayments.length === 0;
-
-  // Fetch user's UPI ID from profile
-  useEffect(() => {
-    if (isHost) {
-      fetch("/api/user-profile")
-        .then((res) => res.json())
-        .then((profile) => {
-          if (profile?.upiId) {
-            setHostUpiId(profile.upiId);
-          }
-          if (profile?.displayName) {
-            // Could pre-fill display name if needed
-          }
-        })
-        .catch(() => {});
-    }
-  }, [isHost]);
 
   function handleShare() {
     const url = `${window.location.origin}/t/${shareCode}`;
