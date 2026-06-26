@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Minus, Plus } from "lucide-react";
 import { Price } from "@/components/price";
 import type { Item } from "@/lib/db/schema";
 import type { PublicParticipant } from "@/hooks/use-table-data";
@@ -11,13 +12,27 @@ interface ItemRowProps {
   isSelected: boolean;
   isFee: boolean;
   onToggle: () => void;
+  myQuantity?: number;
+  maxQuantity?: number;
+  onQuantityChange?: (quantity: number) => void;
 }
 
-export function ItemRow({ item, selectors, isSelected, isFee, onToggle }: ItemRowProps) {
+export function ItemRow({
+  item,
+  selectors,
+  isSelected,
+  isFee,
+  onToggle,
+  myQuantity = 0,
+  maxQuantity = 1,
+  onQuantityChange,
+}: ItemRowProps) {
+  const showStepper = isSelected && item.quantity > 1 && onQuantityChange;
+
   return (
     <motion.button
       whileTap={{ scale: 0.98 }}
-      onClick={isFee ? undefined : onToggle}
+      onClick={isFee ? undefined : showStepper ? undefined : onToggle}
       disabled={isFee}
       className={`
         w-full flex items-center gap-3 px-4 rounded-xl transition-colors duration-150
@@ -30,23 +45,58 @@ export function ItemRow({ item, selectors, isSelected, isFee, onToggle }: ItemRo
         }
       `}
     >
-      {/* Checkbox indicator */}
+      {/* Checkbox / Stepper */}
       {!isFee && (
-        <div
-          className={`
-            w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center transition-colors
-            ${isSelected
-              ? "bg-[var(--selected)] border-[var(--selected)]"
-              : "border-zinc-600"
-            }
-          `}
-        >
-          {isSelected && (
-            <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
-              <path d="M1 5L4.5 8.5L11 1.5" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+        <>
+          {showStepper ? (
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (myQuantity <= 1) {
+                    onToggle();
+                  } else {
+                    onQuantityChange(myQuantity - 1);
+                  }
+                }}
+                className="w-7 h-7 rounded-md bg-zinc-700 hover:bg-zinc-600 active:bg-zinc-500 flex items-center justify-center transition-colors"
+              >
+                <Minus size={14} className="text-zinc-200" />
+              </button>
+              <span className="w-7 text-center text-sm font-semibold text-[var(--selected)] tabular-nums">
+                {myQuantity}
+              </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (myQuantity < maxQuantity) {
+                    onQuantityChange(myQuantity + 1);
+                  }
+                }}
+                disabled={myQuantity >= maxQuantity}
+                className="w-7 h-7 rounded-md bg-zinc-700 hover:bg-zinc-600 active:bg-zinc-500 flex items-center justify-center transition-colors disabled:opacity-40"
+              >
+                <Plus size={14} className="text-zinc-200" />
+              </button>
+            </div>
+          ) : (
+            <div
+              className={`
+                w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center transition-colors
+                ${isSelected
+                  ? "bg-[var(--selected)] border-[var(--selected)]"
+                  : "border-zinc-600"
+                }
+              `}
+            >
+              {isSelected && (
+                <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+                  <path d="M1 5L4.5 8.5L11 1.5" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </div>
           )}
-        </div>
+        </>
       )}
 
       {/* Name */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { nanoid } from "nanoid";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -17,9 +17,21 @@ export function ParticipantJoin({ tableId, onJoined }: ParticipantJoinProps) {
   const [name, setName] = useState(() =>
     isSignedIn ? (user?.fullName ?? user?.firstName ?? "") : ""
   );
-  const [upiId, setUpiId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isSignedIn) {
+      fetch("/api/user-profile")
+        .then((res) => res.json())
+        .then((profile) => {
+          if (profile?.displayName && !name) {
+            setName(profile.displayName);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isSignedIn]);
 
   async function handleJoin() {
     const trimmed = name.trim();
@@ -34,12 +46,21 @@ export function ParticipantJoin({ tableId, onJoined }: ParticipantJoinProps) {
       const res = await fetch("/api/participants", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tableId, displayName: trimmed, sessionToken, upiId: upiId.trim() || undefined }),
+        body: JSON.stringify({ tableId, displayName: trimmed, sessionToken }),
       });
 
       if (!res.ok) throw new Error("Failed to join");
 
       const { participantId } = await res.json();
+
+      if (isSignedIn) {
+        fetch("/api/user-profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ displayName: trimmed }),
+        }).catch(() => {});
+      }
+
       onJoined({ participantId, displayName: trimmed, sessionToken, tableId });
     } catch {
       setError("Couldn't join. Try again.");
@@ -69,16 +90,6 @@ export function ParticipantJoin({ tableId, onJoined }: ParticipantJoinProps) {
           placeholder="Your name"
           maxLength={50}
           autoFocus
-          className="w-full bg-[var(--surface-raised)] text-white placeholder-zinc-500 rounded-xl px-4 py-3 text-base outline-none focus:ring-2 focus:ring-[var(--brand)]"
-        />
-
-        <input
-          type="text"
-          value={upiId}
-          onChange={(e) => setUpiId(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleJoin()}
-          placeholder="UPI ID (optional, e.g. name@bank)"
-          maxLength={50}
           className="w-full bg-[var(--surface-raised)] text-white placeholder-zinc-500 rounded-xl px-4 py-3 text-base outline-none focus:ring-2 focus:ring-[var(--brand)]"
         />
 

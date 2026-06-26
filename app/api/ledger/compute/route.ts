@@ -44,16 +44,40 @@ export async function POST(req: Request) {
   const tableSelections =
     tableItems.length > 0
       ? await db
-          .select({ participantId: selections.participantId, itemId: selections.itemId })
+          .select({ participantId: selections.participantId, itemId: selections.itemId, quantity: selections.quantity })
           .from(selections)
           .innerJoin(items, eq(selections.itemId, items.id))
           .where(eq(items.tableId, tableId))
       : [];
 
+  // Validate: all non-fee items must have at least one selection
+  const unselectedItems = tableItems.filter(
+    (i) => !i.isFee && !tableSelections.some((s) => s.itemId === i.id)
+  );
+  if (unselectedItems.length > 0) {
+    return NextResponse.json(
+      { error: "unselected_items", items: unselectedItems.map((i) => i.name) },
+      { status: 400 }
+    );
+  }
+
+  // Validate: all participants must have a payment entry
+  const paymentMap = new Map(tablePayments.map((p) => [p.participantId, parseFloat(p.amount)]));
+  const missingPayments = tableParticipants.filter(
+    (p) => !paymentMap.get(p.id) || paymentMap.get(p.id)! <= 0
+  );
+  if (missingPayments.length > 0) {
+    return NextResponse.json(
+      { error: "missing_payments", participants: missingPayments.map((p) => p.displayName) },
+      { status: 400 }
+    );
+  }
+
   const ledgerItems = tableItems.map((i) => ({
     id: i.id,
     totalPrice: i.totalPrice ?? "0",
     isFee: i.isFee,
+    quantity: i.quantity,
   }));
 
   const ledgerParticipants = tableParticipants.map((p) => ({

@@ -1,17 +1,18 @@
 "use client";
 
-import { use, useEffect, useRef, useState } from "react";
+import { use, useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Share2, Loader2, Users, Pencil, Check, Clock } from "lucide-react";
+import { Share2, Loader2, Users, Pencil, Check, Clock, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
+import { useUser } from "@clerk/nextjs";
+import { nanoid } from "nanoid";
 import { useTableData } from "@/hooks/use-table-data";
 import { useSession } from "@/hooks/use-session";
 import { ParticipantJoin } from "@/components/participant-join";
 import { ReceiptUpload } from "@/components/receipt-upload";
 import { ProcessingState } from "@/components/processing-state";
 import { ItemList } from "@/components/item-list";
-import { PreSettleSheet } from "@/components/pre-settle-sheet";
 import { ShareRoomSheet } from "@/components/share-room-sheet";
 import { CurrencyProvider, getCurrencySymbol } from "@/lib/currency-context";
 import type { Selection } from "@/hooks/use-table-data";
@@ -25,22 +26,45 @@ import { parseLocalizedNumber } from "@/lib/utils";
 type Phase = "idle" | "success" | "share" | "items";
 type PaymentMode = "host" | "split" | null;
 
+const CURRENCIES = [
+  { code: "INR", label: "₹ INR" },
+  { code: "USD", label: "$ USD" },
+  { code: "EUR", label: "€ EUR" },
+  { code: "GBP", label: "£ GBP" },
+  { code: "AED", label: "د.إ AED" },
+  { code: "SGD", label: "S$ SGD" },
+];
+
 function HostProcessingPanel({
+  hostName,
+  onHostNameChange,
   currency,
+  onCurrencyChange,
   paymentMode,
   onPaymentModeChange,
   wantTip,
   onWantTipChange,
   tipInput,
   onTipInputChange,
+  upiId,
+  onUpiIdChange,
+  onContinue,
+  canContinue,
 }: {
+  hostName: string;
+  onHostNameChange: (v: string) => void;
   currency: string;
+  onCurrencyChange: (c: string) => void;
   paymentMode: PaymentMode;
   onPaymentModeChange: (m: PaymentMode) => void;
   wantTip: boolean;
   onWantTipChange: (v: boolean) => void;
   tipInput: string;
   onTipInputChange: (v: string) => void;
+  upiId: string;
+  onUpiIdChange: (v: string) => void;
+  onContinue: () => void;
+  canContinue: boolean;
 }) {
   const currencySymbol = getCurrencySymbol(currency);
 
@@ -55,6 +79,51 @@ function HostProcessingPanel({
       <p className="text-zinc-400 text-sm text-center animate-pulse">
         Processing your receipt in the background…
       </p>
+
+      {/* Your name */}
+      <div className="bg-[var(--surface)] rounded-2xl px-4 py-4 space-y-3">
+        <p className="text-sm font-medium text-zinc-200">Your name</p>
+        <input
+          type="text"
+          value={hostName}
+          onChange={(e) => onHostNameChange(e.target.value)}
+          maxLength={50}
+          className="w-full bg-[var(--surface-raised)] text-white placeholder-zinc-500 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--brand)]"
+        />
+      </div>
+
+      {/* Currency selector */}
+      <div className="bg-[var(--surface)] rounded-2xl px-4 py-4 space-y-3">
+        <p className="text-sm font-medium text-zinc-200">Currency</p>
+        <div className="relative">
+          <select
+            value={currency}
+            onChange={(e) => onCurrencyChange(e.target.value)}
+            className="w-full appearance-none bg-[var(--surface-raised)] text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--brand)] pr-10"
+          >
+            {CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+        </div>
+      </div>
+
+      {/* UPI ID */}
+      <div className="bg-[var(--surface)] rounded-2xl px-4 py-4 space-y-3">
+        <p className="text-sm font-medium text-zinc-200">Your UPI ID</p>
+        <input
+          type="text"
+          value={upiId}
+          onChange={(e) => onUpiIdChange(e.target.value)}
+          placeholder="name@bank (e.g. rahul@okaxis)"
+          maxLength={50}
+          className="w-full bg-[var(--surface-raised)] text-white placeholder-zinc-500 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--brand)]"
+        />
+        <p className="text-xs text-zinc-500">Others will share their bills to this UPI ID</p>
+      </div>
 
       {/* Who paid */}
       <div className="bg-[var(--surface)] rounded-2xl px-4 py-4 space-y-3">
@@ -129,7 +198,71 @@ function HostProcessingPanel({
           )}
         </AnimatePresence>
       </div>
+
+      {/* Continue button */}
+      <button
+        onClick={onContinue}
+        disabled={!canContinue}
+        className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-40"
+      >
+        Continue
+      </button>
     </motion.div>
+  );
+}
+
+function PaymentInput({
+  participantId,
+  initialAmount,
+  tableId,
+  sessionToken,
+  currencySymbol,
+}: {
+  participantId: string;
+  initialAmount: number;
+  tableId: string;
+  sessionToken: string;
+  currencySymbol: string;
+}) {
+  const [value, setValue] = useState(initialAmount > 0 ? String(initialAmount) : "");
+  const pendingRef = useRef(0);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (pendingRef.current === 0) {
+      setValue(initialAmount > 0 ? String(initialAmount) : "");
+    }
+  }, [initialAmount]);
+
+  function handleChange(v: string) {
+    setValue(v);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      const amount = parseLocalizedNumber(v || "0");
+      pendingRef.current++;
+      fetch("/api/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-session-token": sessionToken },
+        body: JSON.stringify({ tableId, participantId, amount }),
+      })
+        .then((r) => { if (!r.ok) throw new Error("Failed"); })
+        .catch(() => toast.error("Failed to save payment"))
+        .finally(() => { pendingRef.current--; });
+    }, 300);
+  }
+
+  return (
+    <div className="flex items-center gap-1 bg-[var(--surface-raised)] rounded-xl px-3 py-2">
+      <span className="text-zinc-400 text-sm">{currencySymbol}</span>
+      <input
+        type="text"
+        inputMode="decimal"
+        placeholder="0"
+        value={value}
+        onChange={(e) => handleChange(e.target.value)}
+        className="w-20 bg-transparent text-zinc-100 text-sm text-right outline-none"
+      />
+    </div>
   );
 }
 
@@ -142,19 +275,22 @@ export default function TablePage({
   const router = useRouter();
   const { data, error, loading, refresh } = useTableData(shareCode);
   const { session, saveSession } = useSession(data?.table?.id ?? null);
+  const { isSignedIn, user } = useUser();
   const [localSelections, setLocalSelections] = useState<Selection[] | null>(null);
-  const [showSettle, setShowSettle] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [editingParticipantId, setEditingParticipantId] = useState<string | undefined>(undefined);
   const prevStatusRef = useRef<string | null>(null);
+  const autoJoiningRef = useRef(false);
 
   // Host processing state — captured while receipt OCR runs
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
   const [paymentMode, setPaymentMode] = useState<PaymentMode>(null);
   const [wantTip, setWantTip] = useState(false);
   const [tipInput, setTipInput] = useState("");
+  const [hostUpiId, setHostUpiId] = useState("");
+  const [currency, setCurrency] = useState("INR");
+  const [hostName, setHostName] = useState("");
 
-  const currency = data?.table?.currency ?? "INR";
   const hostTip = wantTip ? parseLocalizedNumber(tipInput || "0") : 0;
 
   // Phase transitions based on table status
@@ -170,11 +306,16 @@ export default function TablePage({
       }
       // status === "active" → phase stays "idle"
     } else if (prev === "active" && status === "items_ready") {
-      // OCR just completed — show success then share sheet
+      // OCR just completed
       setUploadingReceipt(false);
-      setPhase("success");
-      const t = setTimeout(() => setPhase("share"), 1000);
-      return () => clearTimeout(t);
+      if (phase === "share") {
+        // Already showing share sheet — skip success, keep sharing
+        // User can click Continue on share sheet to go to items
+      } else {
+        setPhase("success");
+        const t = setTimeout(() => setPhase("share"), 1000);
+        return () => clearTimeout(t);
+      }
     } else if (status === "editing" && phase === "idle") {
       setPhase("items");
     }
@@ -188,6 +329,48 @@ export default function TablePage({
       setEditingParticipantId(session.participantId);
     }
   }, [data?.table?.status, session?.participantId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync currency from table data when available
+  useEffect(() => {
+    if (data?.table?.currency) {
+      setCurrency(data.table.currency);
+    }
+  }, [data?.table?.currency]);
+
+  // Sync paymentMode from table data when available
+  useEffect(() => {
+    if (data?.table?.paymentMode) {
+      setPaymentMode(data.table.paymentMode);
+    }
+  }, [data?.table?.paymentMode]);
+
+  // Auto-join signed-in users (skip join modal)
+  useEffect(() => {
+    if (!data || session || !isSignedIn || autoJoiningRef.current) return;
+    autoJoiningRef.current = true;
+    const sessionToken = nanoid(32);
+    const displayName = user?.fullName ?? user?.firstName ?? "You";
+    fetch("/api/participants", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tableId: data.table.id, displayName, sessionToken }),
+    })
+      .then((r) => r.json())
+      .then(({ participantId }) => {
+        if (participantId) {
+          saveSession({ participantId, displayName, sessionToken, tableId: data.table.id });
+          refresh();
+        }
+      })
+      .catch(() => { autoJoiningRef.current = false; });
+  }, [data, session, isSignedIn, user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Pre-fill host name from Clerk / user profile
+  useEffect(() => {
+    if (isSignedIn && user && !hostName) {
+      setHostName(user.fullName ?? user.firstName ?? "");
+    }
+  }, [isSignedIn, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (
@@ -208,9 +391,38 @@ export default function TablePage({
   const { table, items, participants, selections } = data;
   const activeSelections = localSelections ?? selections;
   const isHost = !!session && participants[0]?.id === session.participantId;
-  const isEditing = table.status === "editing";
+  // Phase 6: Host always sees edit mode when items are ready
+  const isEditing = table.status === "editing" || (isHost && table.status === "items_ready");
 
   const billTotal = items.reduce((sum, i) => sum + parseFloat(i.totalPrice ?? "0"), 0);
+
+  // Validation: all items must be selected, all payments must be filled
+  const regularItems = items.filter((i) => !i.isFee);
+  const unselectedItems = regularItems.filter(
+    (i) => !selections.some((s) => s.itemId === i.id)
+  );
+  const paymentMap = new Map(data.payments.map((p) => [p.participantId, parseFloat(p.amount)]));
+  const missingPayments = participants.filter(
+    (p) => !paymentMap.get(p.id) || paymentMap.get(p.id)! <= 0
+  );
+  const canSettle = unselectedItems.length === 0 && missingPayments.length === 0;
+
+  // Fetch user's UPI ID from profile
+  useEffect(() => {
+    if (isHost) {
+      fetch("/api/user-profile")
+        .then((res) => res.json())
+        .then((profile) => {
+          if (profile?.upiId) {
+            setHostUpiId(profile.upiId);
+          }
+          if (profile?.displayName) {
+            // Could pre-fill display name if needed
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isHost]);
 
   function handleShare() {
     const url = `${window.location.origin}/t/${shareCode}`;
@@ -223,23 +435,69 @@ export default function TablePage({
   }
 
   async function handleSettleClick() {
-    if (!session) return;
-    if (paymentMode === "split") {
-      // Skip payment collection — compute ledger directly
-      try {
-        const res = await fetch("/api/ledger/compute", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-session-token": session.sessionToken },
-          body: JSON.stringify({ tableId: table.id, tip: hostTip }),
-        });
-        if (!res.ok) throw new Error("compute failed");
-        router.push(`/t/${shareCode}/settle`);
-      } catch {
-        toast.error("Couldn't settle up, try again");
-      }
-    } else {
-      setShowSettle(true);
+    if (!session || !canSettle) return;
+
+    // Save UPI ID to user profile if provided
+    if (hostUpiId.trim()) {
+      fetch("/api/user-profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ upiId: hostUpiId.trim() }),
+      }).catch(() => {});
     }
+
+    try {
+      const res = await fetch("/api/ledger/compute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-session-token": session.sessionToken },
+        body: JSON.stringify({ tableId: table.id, tip: hostTip }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        if (err.error === "unselected_items") {
+          toast.error(`Unassigned items: ${err.items?.join(", ")}`);
+        } else if (err.error === "missing_payments") {
+          toast.error(`Missing payments from: ${err.participants?.join(", ")}`);
+        } else {
+          throw new Error("compute failed");
+        }
+        return;
+      }
+      router.push(`/t/${shareCode}/settle`);
+    } catch {
+      toast.error("Couldn't settle up, try again");
+    }
+  }
+
+  function handleContinue() {
+    // Save host name to profile + participant record
+    if (hostName.trim() && session) {
+      fetch("/api/user-profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName: hostName.trim() }),
+      }).catch(() => {});
+      fetch("/api/participants", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-session-token": session.sessionToken },
+        body: JSON.stringify({ displayName: hostName.trim() }),
+      }).catch(() => {});
+    }
+
+    // Save currency + paymentMode to table if changed
+    const updates: Record<string, string> = {};
+    if (currency !== table.currency) updates.currency = currency;
+    if (paymentMode && paymentMode !== table.paymentMode) updates.paymentMode = paymentMode;
+    if (Object.keys(updates).length > 0) {
+      fetch(`/api/tables/${shareCode}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-session-token": session?.sessionToken ?? "" },
+        body: JSON.stringify(updates),
+      }).catch(() => {});
+    }
+
+    // Always go straight to share — no processing screen
+    setPhase("share");
   }
 
   if (table.status === "expired") {
@@ -268,12 +526,6 @@ export default function TablePage({
   }
 
   const showItems = table.status === "items_ready" || table.status === "editing";
-
-  // Pre-filled host payment: if host said "I paid everything", seed their amount
-  const prefilledAmounts: Record<string, number> | undefined =
-    paymentMode === "host" && session
-      ? { [session.participantId]: billTotal + hostTip }
-      : undefined;
 
   return (
     <CurrencyProvider value={currency}>
@@ -337,13 +589,20 @@ export default function TablePage({
             />
             {uploadingReceipt && (
               <HostProcessingPanel
+                hostName={hostName}
+                onHostNameChange={setHostName}
                 currency={currency}
+                onCurrencyChange={setCurrency}
                 paymentMode={paymentMode}
                 onPaymentModeChange={setPaymentMode}
                 wantTip={wantTip}
                 onWantTipChange={setWantTip}
                 tipInput={tipInput}
                 onTipInputChange={setTipInput}
+                upiId={hostUpiId}
+                onUpiIdChange={setHostUpiId}
+                onContinue={handleContinue}
+                canContinue={!!paymentMode}
               />
             )}
           </motion.div>
@@ -428,6 +687,38 @@ export default function TablePage({
                 onEditingParticipantChange={isEditing && isHost ? setEditingParticipantId : undefined}
               />
             )}
+
+            {/* Payments section */}
+            <div className="space-y-3 mt-6">
+              <p className="text-xs text-zinc-500 uppercase tracking-wider px-1">Who paid?</p>
+              {participants.map((p) => {
+                const canEdit = isHost || p.id === session?.participantId;
+                const payment = data.payments.find((pay) => pay.participantId === p.id);
+                const amount = payment ? parseFloat(payment.amount) : 0;
+                return (
+                  <div key={p.id} className="flex items-center gap-3 px-4 py-3 bg-[var(--surface)] rounded-xl">
+                    <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-xs font-bold text-zinc-200 flex-shrink-0">
+                      {p.displayName[0].toUpperCase()}
+                    </div>
+                    <span className="text-zinc-200 text-sm flex-1">{p.displayName}</span>
+                    {canEdit ? (
+                      <PaymentInput
+                        participantId={p.id}
+                        initialAmount={amount}
+                        tableId={table.id}
+                        sessionToken={session!.sessionToken}
+                        currencySymbol={getCurrencySymbol(currency)}
+                      />
+                    ) : (
+                      <div className="flex items-center gap-1 text-sm text-zinc-300">
+                        <span className="text-zinc-400">{getCurrencySymbol(currency)}</span>
+                        {amount > 0 ? amount.toFixed(2) : "—"}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -436,9 +727,21 @@ export default function TablePage({
       {showItems && phase === "items" && isHost && (
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0F0F0F]/90 backdrop-blur-sm border-t border-zinc-800">
           <div className="max-w-lg mx-auto">
+            {/* Validation errors */}
+            {!canSettle && (
+              <div className="text-red-400 text-xs space-y-1 mb-2 px-1">
+                {unselectedItems.length > 0 && (
+                  <p>Unassigned: {unselectedItems.map((i) => i.name).join(", ")}</p>
+                )}
+                {missingPayments.length > 0 && (
+                  <p>Missing payments: {missingPayments.map((p) => p.displayName).join(", ")}</p>
+                )}
+              </div>
+            )}
             <button
               onClick={handleSettleClick}
-              className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all"
+              disabled={!canSettle}
+              className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-40"
             >
               Settle up →
             </button>
@@ -447,7 +750,7 @@ export default function TablePage({
       )}
 
       {/* Non-host waiting message in edit mode */}
-      {isEditing && !isHost && phase === "items" && (
+      {showItems && !isHost && phase === "items" && (
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0F0F0F]/90 backdrop-blur-sm border-t border-zinc-800">
           <div className="max-w-lg mx-auto">
             <p className="text-center text-zinc-500 text-sm">
@@ -457,22 +760,8 @@ export default function TablePage({
         </div>
       )}
 
-      {/* Pre-settle sheet (only shown when paymentMode is not "split") */}
-      {showSettle && (
-        <PreSettleSheet
-          tableId={table.id}
-          sessionToken={session!.sessionToken}
-          participants={participants}
-          billTotal={billTotal}
-          initialTip={wantTip ? hostTip : undefined}
-          prefilledAmounts={prefilledAmounts}
-          onSettled={() => router.push(`/t/${shareCode}/settle`)}
-          onClose={() => setShowSettle(false)}
-        />
-      )}
-
-      {/* Join modal */}
-      {!session && data && (
+      {/* Join modal — only for guests (non-signed-in users) */}
+      {!session && data && !isSignedIn && (
         <ParticipantJoin
           tableId={table.id}
           onJoined={(s) => {

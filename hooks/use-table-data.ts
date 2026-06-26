@@ -6,6 +6,7 @@ import type { Item, Participant, SplitTable, LedgerEntry, Payment } from "@/lib/
 export interface Selection {
   participantId: string;
   itemId: string;
+  quantity: number;
 }
 
 export type PublicParticipant = Omit<Participant, "sessionToken"> & { upiId: string | null };
@@ -59,7 +60,11 @@ export function useTableData(shareCode: string) {
         pollRef.current = MIN_INTERVAL;
         lastUpdateRef.current = now;
       } else {
-        pollRef.current = Math.min(pollRef.current + STEP, MAX_INTERVAL);
+        // During active editing/items_ready, keep polling faster for real-time sync
+        const isActiveEditing =
+          json.table.status === "items_ready" || json.table.status === "editing";
+        const maxInterval = isActiveEditing ? 3000 : MAX_INTERVAL;
+        pollRef.current = Math.min(pollRef.current + STEP, maxInterval);
       }
 
       setData(json);

@@ -8,6 +8,7 @@ import { useTableData } from "@/hooks/use-table-data";
 import { useSession } from "@/hooks/use-session";
 import { Price } from "@/components/price";
 import { CurrencyProvider } from "@/lib/currency-context";
+import { UpiAppModal } from "@/components/upi-app-modal";
 import type { LedgerEntry, Payment, Item } from "@/lib/db/schema";
 import type { Selection, PublicParticipant } from "@/hooks/use-table-data";
 
@@ -20,6 +21,45 @@ const AnimatePresenceLazy = lazy(() =>
 
 function participantName(id: string, participants: PublicParticipant[]) {
   return participants.find((p) => p.id === id)?.displayName ?? "Unknown";
+}
+
+/** Compute per-person consumed amount (food + proportional fees + tip) */
+function computeConsumed(
+  participantId: string,
+  regularItems: Item[],
+  feeItems: Item[],
+  selections: Selection[],
+  tip: number
+) {
+  // Food subtotals by participant (quantity-weighted)
+  const foodSubtotals: Record<string, number> = {};
+  for (const item of regularItems) {
+    const itemSelections = selections.filter((s) => s.itemId === item.id);
+    if (itemSelections.length === 0) continue;
+    const totalAllocated = itemSelections.reduce((sum, s) => sum + s.quantity, 0);
+    if (totalAllocated === 0) continue;
+    for (const s of itemSelections) {
+      const share = (s.quantity / totalAllocated) * parseFloat(item.totalPrice ?? "0");
+      foodSubtotals[s.participantId] = (foodSubtotals[s.participantId] ?? 0) + share;
+    }
+  }
+
+  const grandFoodSubtotal = Object.values(foodSubtotals).reduce((a, b) => a + b, 0);
+  const myFoodSubtotal = foodSubtotals[participantId] ?? 0;
+  const n = new Set(selections.map((s) => s.participantId)).size || 1;
+  const proportion = grandFoodSubtotal > 0 ? myFoodSubtotal / grandFoodSubtotal : 1 / n;
+
+  const totalFees = feeItems.reduce((s, f) => s + parseFloat(f.totalPrice ?? "0"), 0);
+  const myFeeShare = totalFees * proportion;
+  const myTipShare = tip * proportion;
+
+  return {
+    food: myFoodSubtotal,
+    fees: myFeeShare,
+    tip: myTipShare,
+    total: myFoodSubtotal + myFeeShare + myTipShare,
+    proportion,
+  };
 }
 
 function PersonDetail({
@@ -40,35 +80,23 @@ function PersonDetail({
   const regularItems = items.filter((i) => !i.isFee);
   const feeItems = items.filter((i) => i.isFee);
 
-  const allFoodSubtotals: Record<string, number> = {};
-  for (const item of regularItems) {
-    const selectors = selections.filter((s) => s.itemId === item.id);
-    if (selectors.length === 0) continue;
-    const share = parseFloat(item.totalPrice ?? "0") / selectors.length;
-    for (const s of selectors) {
-      allFoodSubtotals[s.participantId] = (allFoodSubtotals[s.participantId] ?? 0) + share;
-    }
-  }
-  const grandFoodSubtotal = Object.values(allFoodSubtotals).reduce((a, b) => a + b, 0);
-  const myFoodSubtotal = allFoodSubtotals[participant.id] ?? 0;
-  const n = new Set(selections.map((s) => s.participantId)).size || 1;
-  const proportion = grandFoodSubtotal > 0 ? myFoodSubtotal / grandFoodSubtotal : 1 / n;
-
-  const totalFees = feeItems.reduce((s, f) => s + parseFloat(f.totalPrice ?? "0"), 0);
-  const myFeeShare = totalFees * proportion;
-  const myTipShare = tip * proportion;
+  const consumed = computeConsumed(participant.id, regularItems, feeItems, selections, tip);
 
   const myFoodRows = regularItems
     .filter((i) => selections.some((s) => s.itemId === i.id && s.participantId === participant.id))
     .map((i) => {
-      const selectorCount = selections.filter((s) => s.itemId === i.id).length;
-      const myShare = parseFloat(i.totalPrice ?? "0") / selectorCount;
-      return { id: i.id, name: i.name, quantity: i.quantity, myShare, selectorCount };
+      const itemSelections = selections.filter((s) => s.itemId === i.id);
+      const totalAllocated = itemSelections.reduce((sum, s) => sum + s.quantity, 0);
+      const mySel = itemSelections.find((s) => s.participantId === participant.id);
+      const myQty = mySel?.quantity ?? 1;
+      const myShare = totalAllocated > 0
+        ? (myQty / totalAllocated) * parseFloat(i.totalPrice ?? "0")
+        : 0;
+      return { id: i.id, name: i.name, itemQuantity: i.quantity, myQty, myShare, totalAllocated };
     });
 
-  const totalOwed = myFoodSubtotal + myFeeShare + myTipShare;
   const paid = parseFloat(payments.find((p) => p.participantId === participant.id)?.amount ?? "0");
-  const net = totalOwed - paid;
+  const net = consumed.total - paid;
 
   return (
     <MotionDiv
@@ -90,6 +118,13 @@ function PersonDetail({
         </div>
       </div>
 
+      {/* Consumed summary */}
+      <div className="mb-4 px-4 py-3 bg-zinc-900/50 rounded-xl">
+        <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Consumed</div>
+        <Price amount={consumed.total} className="text-xl font-bold text-zinc-100" />
+      </div>
+
+      {/* Food items breakdown */}
       <div className="space-y-3 mb-4">
         {myFoodRows.length === 0 && (
           <p className="text-zinc-500 text-sm py-4 text-center">No items selected</p>
@@ -98,8 +133,10 @@ function PersonDetail({
           <div key={row.id} className="flex items-center justify-between text-sm">
             <div>
               <span className="text-zinc-200">{row.name}</span>
-              {row.selectorCount > 1 && (
-                <span className="text-zinc-500 ml-1.5 text-xs">÷{row.selectorCount}</span>
+              {row.itemQuantity > 1 && (
+                <span className="text-zinc-500 ml-1.5 text-xs">
+                  {row.myQty}/{row.totalAllocated} allocated
+                </span>
               )}
             </div>
             <Price amount={row.myShare} className="text-zinc-300" />
@@ -107,28 +144,26 @@ function PersonDetail({
         ))}
       </div>
 
-      {(feeItems.length > 0 || myTipShare > 0) && (
+      {/* Fees and tip */}
+      {(feeItems.length > 0 || consumed.tip > 0) && (
         <div className="border-t border-zinc-800 pt-3 space-y-2 mb-4">
           {feeItems.map((f) => (
             <div key={f.id} className="flex justify-between text-sm">
               <span className="text-zinc-400">{f.name}</span>
-              <Price amount={parseFloat(f.totalPrice ?? "0") * proportion} className="text-zinc-400" />
+              <Price amount={parseFloat(f.totalPrice ?? "0") * consumed.proportion} className="text-zinc-400" />
             </div>
           ))}
-          {myTipShare > 0 && (
+          {consumed.tip > 0 && (
             <div className="flex justify-between text-sm">
               <span className="text-zinc-400">Tip (your share)</span>
-              <Price amount={myTipShare} className="text-zinc-400" />
+              <Price amount={consumed.tip} className="text-zinc-400" />
             </div>
           )}
         </div>
       )}
 
+      {/* Paid and net */}
       <div className="border-t border-zinc-800 pt-3 space-y-2">
-        <div className="flex justify-between text-sm">
-          <span className="text-zinc-400">Total owed</span>
-          <Price amount={totalOwed} className="text-zinc-200 font-medium" />
-        </div>
         <div className="flex justify-between text-sm">
           <span className="text-zinc-400">Paid</span>
           <Price amount={paid} className="text-[var(--selected)] font-medium" />
@@ -152,14 +187,26 @@ function PersonDetail({
 function PersonTotal({
   participant,
   entries,
+  items,
+  selections,
+  payments,
+  tip,
   index,
   onClick,
 }: {
   participant: PublicParticipant;
   entries: LedgerEntry[];
+  items: Item[];
+  selections: Selection[];
+  payments: Payment[];
+  tip: number;
   index: number;
   onClick: () => void;
 }) {
+  const regularItems = items.filter((i) => !i.isFee);
+  const feeItems = items.filter((i) => i.isFee);
+  const consumed = computeConsumed(participant.id, regularItems, feeItems, selections, tip);
+
   const owes = entries.filter((e) => e.fromParticipant === participant.id);
   const receives = entries.filter((e) => e.toParticipant === participant.id);
   const totalOwed = owes.reduce((s, e) => s + parseFloat(e.amount), 0);
@@ -185,10 +232,16 @@ function PersonTotal({
             <span className="text-xs text-zinc-500">Tap for breakdown</span>
           </div>
         </div>
-        <Price
-          amount={Math.abs(net)}
-          className={`text-base font-semibold ${net > 0.005 ? "text-[var(--danger)]" : "text-[var(--selected)]"}`}
-        />
+        <div className="text-right">
+          <div className="text-xs text-zinc-500">Consumed</div>
+          <Price amount={consumed.total} className="text-sm text-zinc-300 block" />
+          <div className={`text-base font-semibold ${net > 0.005 ? "text-[var(--danger)]" : "text-[var(--selected)]"}`}>
+            {net > 0.005 ? "Owes" : net < -0.005 ? "Gets back" : "Settled ✓"}
+            {Math.abs(net) > 0.005 && (
+              <> <Price amount={Math.abs(net)} className="inline" /></>
+            )}
+          </div>
+        </div>
       </button>
     </MotionDiv>
   );
@@ -264,6 +317,14 @@ export default function SettlePage({
   const [detailParticipant, setDetailParticipant] = useState<PublicParticipant | null>(null);
   const [showReopenModal, setShowReopenModal] = useState(false);
   const [reopening, setReopening] = useState(false);
+  const [upiModalData, setUpiModalData] = useState<{
+    upiId: string;
+    name: string;
+    amount: number;
+  } | null>(null);
+  const [upiPromptDismissed, setUpiPromptDismissed] = useState(false);
+  const [upiInput, setUpiInput] = useState("");
+  const [savingUpi, setSavingUpi] = useState(false);
 
   useEffect(() => {
     if (!loading && data && data.table.status !== "settled") {
@@ -283,6 +344,11 @@ export default function SettlePage({
   const tip = parseFloat(table.tip ?? "0");
   const isHost = participants[0]?.id === session?.participantId;
 
+  // Show UPI prompt if current user is owed money but has no UPI ID
+  const myParticipant = participants.find((p) => p.id === session?.participantId);
+  const iAmOwed = ledger.some((e) => e.toParticipant === session?.participantId);
+  const showUpiPrompt = iAmOwed && !myParticipant?.upiId && !upiPromptDismissed;
+
   if (data.table.status !== "settled") {
     return null;
   }
@@ -300,6 +366,28 @@ export default function SettlePage({
     } else {
       navigator.clipboard.writeText(text);
       toast.success("Summary copied!");
+    }
+  }
+
+  async function handleSaveUpi() {
+    if (!upiInput.trim() || !session) return;
+    setSavingUpi(true);
+    try {
+      const res = await fetch("/api/user-profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ upiId: upiInput.trim() }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      // Update local participant data
+      const me = participants.find((p) => p.id === session.participantId);
+      if (me) me.upiId = upiInput.trim();
+      setUpiPromptDismissed(true);
+      toast.success("UPI ID saved!");
+    } catch {
+      toast.error("Couldn't save UPI ID");
+    } finally {
+      setSavingUpi(false);
     }
   }
 
@@ -378,11 +466,45 @@ export default function SettlePage({
               key={p.id}
               participant={p}
               entries={ledger}
+              items={items}
+              selections={selections}
+              payments={payments}
+              tip={tip}
               index={i}
               onClick={() => setDetailParticipant(p)}
             />
           ))}
         </div>
+
+        {/* UPI ID prompt */}
+        {showUpiPrompt && (
+          <MotionDiv
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 px-4 py-3 bg-zinc-900/50 rounded-xl"
+          >
+            <p className="text-sm text-zinc-300 mb-2">
+              Add UPI ID to let your friends pay you from खल्लास
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="yourname@upi"
+                value={upiInput}
+                onChange={(e) => setUpiInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSaveUpi()}
+                className="flex-1 h-9 px-3 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-zinc-500"
+              />
+              <button
+                onClick={handleSaveUpi}
+                disabled={savingUpi || !upiInput.trim()}
+                className="h-9 px-3 bg-[var(--brand)] text-black text-xs font-semibold rounded-lg active:scale-95 transition-transform disabled:opacity-50"
+              >
+                {savingUpi ? "…" : "Save"}
+              </button>
+            </div>
+          </MotionDiv>
+        )}
 
         {/* Transfer list */}
         {ledger.length > 0 && (
@@ -391,9 +513,7 @@ export default function SettlePage({
             {ledger.map((entry, i) => {
               const recipient = participants.find((p) => p.id === entry.toParticipant);
               const recipientUpiId = recipient?.upiId;
-              const upiHref = recipientUpiId
-                ? `upi://pay?pa=${encodeURIComponent(recipientUpiId)}&pn=${encodeURIComponent(recipient?.displayName ?? "")}&am=${parseFloat(entry.amount).toFixed(2)}&cu=${table.currency ?? "INR"}`
-                : null;
+              const canPay = recipientUpiId && session?.participantId === entry.fromParticipant;
               return (
                 <MotionDiv
                   key={entry.id}
@@ -410,14 +530,20 @@ export default function SettlePage({
                     {participantName(entry.toParticipant, participants)}
                   </span>
                   <Price amount={entry.amount} className="ml-auto text-[var(--brand)]" />
-                  {upiHref && session?.participantId === entry.fromParticipant && (
-                    <a
-                      href={upiHref}
+                  {canPay && (
+                    <button
+                      onClick={() =>
+                        setUpiModalData({
+                          upiId: recipientUpiId,
+                          name: recipient?.displayName ?? "",
+                          amount: parseFloat(entry.amount),
+                        })
+                      }
                       className="flex items-center gap-1 ml-2 px-2.5 py-1 bg-[var(--brand)] text-black text-xs font-semibold rounded-lg active:scale-95 transition-transform flex-shrink-0"
                     >
                       <Smartphone size={12} />
                       Pay
-                    </a>
+                    </button>
                   )}
                 </MotionDiv>
               );
@@ -480,6 +606,18 @@ export default function SettlePage({
           />
         )}
       </AnimatePresenceLazy>
+
+      {/* UPI app chooser modal */}
+      {upiModalData && (
+        <UpiAppModal
+          isOpen={true}
+          onClose={() => setUpiModalData(null)}
+          upiId={upiModalData.upiId}
+          name={upiModalData.name}
+          amount={upiModalData.amount}
+          currency={table.currency ?? "INR"}
+        />
+      )}
     </>
     </CurrencyProvider>
   );

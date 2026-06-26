@@ -59,6 +59,19 @@ export function ItemList({
     );
   }
 
+  function getMyQuantity(itemId: string): number {
+    const sel = localSelections.find(
+      (s) => s.itemId === itemId && s.participantId === activeParticipantId
+    );
+    return sel?.quantity ?? 0;
+  }
+
+  function getOtherAllocated(itemId: string): number {
+    return localSelections
+      .filter((s) => s.itemId === itemId && s.participantId !== activeParticipantId)
+      .reduce((sum, s) => sum + s.quantity, 0);
+  }
+
   function selectorsFor(itemId: string) {
     const ids = localSelections
       .filter((s) => s.itemId === itemId)
@@ -70,39 +83,102 @@ export function ItemList({
     const selected = isSelected(item.id);
     const prev = localSelections;
 
-    // Optimistic update
     if (selected) {
+      // Deselect: remove
       const next = localSelections.filter(
         (s) => !(s.itemId === item.id && s.participantId === activeParticipantId)
       );
       setLocalSelections(next);
       onSelectionsChange(next);
+
+      pendingRef.current++;
+      try {
+        const res = await fetch("/api/selections", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            "x-session-token": session.sessionToken,
+          },
+          body: JSON.stringify({ participantId: activeParticipantId, itemId: item.id }),
+        });
+        if (!res.ok) throw new Error("Failed");
+      } catch {
+        setLocalSelections(prev);
+        onSelectionsChange(prev);
+        toast.error("Couldn't update selection, try again");
+      } finally {
+        pendingRef.current--;
+        if (pendingRef.current === 0) {
+          setLocalSelections(latestExternal.current);
+          onSelectionsChange(latestExternal.current);
+        }
+      }
     } else {
-      const next = [...localSelections, { itemId: item.id, participantId: activeParticipantId }];
+      // Select: add with quantity 1
+      const next = [...localSelections, { itemId: item.id, participantId: activeParticipantId, quantity: 1 }];
       setLocalSelections(next);
       onSelectionsChange(next);
+
+      pendingRef.current++;
+      try {
+        const res = await fetch("/api/selections", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-session-token": session.sessionToken,
+          },
+          body: JSON.stringify({ participantId: activeParticipantId, itemId: item.id, quantity: 1 }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error ?? "Failed");
+        }
+      } catch (e) {
+        setLocalSelections(prev);
+        onSelectionsChange(prev);
+        toast.error(e instanceof Error ? e.message : "Couldn't update selection, try again");
+      } finally {
+        pendingRef.current--;
+        if (pendingRef.current === 0) {
+          setLocalSelections(latestExternal.current);
+          onSelectionsChange(latestExternal.current);
+        }
+      }
     }
+  }
+
+  async function updateQuantity(item: Item, newQuantity: number) {
+    const prev = localSelections;
+
+    // Optimistic update
+    const next = localSelections.map((s) =>
+      s.itemId === item.id && s.participantId === activeParticipantId
+        ? { ...s, quantity: newQuantity }
+        : s
+    );
+    setLocalSelections(next);
+    onSelectionsChange(next);
 
     pendingRef.current++;
     try {
       const res = await fetch("/api/selections", {
-        method: selected ? "DELETE" : "POST",
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           "x-session-token": session.sessionToken,
         },
-        body: JSON.stringify({ participantId: activeParticipantId, itemId: item.id }),
+        body: JSON.stringify({ participantId: activeParticipantId, itemId: item.id, quantity: newQuantity }),
       });
-
-      if (!res.ok) throw new Error("Failed");
-    } catch {
-      // Revert on error
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error ?? "Failed");
+      }
+    } catch (e) {
       setLocalSelections(prev);
       onSelectionsChange(prev);
-      toast.error("Couldn't update selection, try again");
+      toast.error(e instanceof Error ? e.message : "Couldn't update quantity, try again");
     } finally {
       pendingRef.current--;
-      // Sync any poll that arrived while the request was in flight
       if (pendingRef.current === 0) {
         setLocalSelections(latestExternal.current);
         onSelectionsChange(latestExternal.current);
@@ -143,16 +219,24 @@ export function ItemList({
       )}
 
       <div ref={listRef} className="space-y-2">
-        {regularItems.map((item) => (
-          <ItemRow
-            key={item.id}
-            item={item}
-            selectors={selectorsFor(item.id)}
-            isSelected={isSelected(item.id)}
-            isFee={false}
-            onToggle={() => toggle(item)}
-          />
-        ))}
+        {regularItems.map((item) => {
+          const myQty = getMyQuantity(item.id);
+          const otherAllocated = getOtherAllocated(item.id);
+          const maxAvailable = item.quantity - otherAllocated;
+          return (
+            <ItemRow
+              key={item.id}
+              item={item}
+              selectors={selectorsFor(item.id)}
+              isSelected={isSelected(item.id)}
+              isFee={false}
+              onToggle={() => toggle(item)}
+              myQuantity={myQty}
+              maxQuantity={maxAvailable}
+              onQuantityChange={(qty) => updateQuantity(item, qty)}
+            />
+          );
+        })}
       </div>
 
       {feeItems.length > 0 && (

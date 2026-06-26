@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { selections, participants, items, splitTables } from "@/lib/db/schema";
-import { AddSelectionSchema, RemoveSelectionSchema } from "@/lib/schemas";
-import { eq, and, asc } from "drizzle-orm";
+import { AddSelectionSchema, UpdateSelectionSchema, RemoveSelectionSchema } from "@/lib/schemas";
+import { eq, and, asc, sql } from "drizzle-orm";
 import { hashToken } from "@/lib/auth";
 
 /**
  * Validate that the session is allowed to write a selection for `participantId` on `itemId`.
  *
  * Normal case: the session token directly belongs to the participant.
- * Host-override case (editing mode only): the session token belongs to the table's host
- * (participants[0]) and the table is currently in `editing` status.
+ * Host-override case (editing/items_ready): the session token belongs to the table's host
+ * (participants[0]) and the table is currently in `editing` or `items_ready` status.
  */
 async function validateSession(
   participantId: string,
@@ -33,7 +33,7 @@ async function validateSession(
 
   if (direct) return true;
 
-  // Host bypass: only allowed when table is in editing mode
+  // Host bypass: allowed when table is in editing or items_ready mode
   const [item] = await db
     .select({ tableId: items.tableId })
     .from(items)
@@ -46,7 +46,7 @@ async function validateSession(
     .from(splitTables)
     .where(eq(splitTables.id, item.tableId))
     .limit(1);
-  if (!table || table.status !== "editing") return false;
+  if (!table || (table.status !== "editing" && table.status !== "items_ready")) return false;
 
   // Verify the requester is in this table
   const [requester] = await db
@@ -80,6 +80,27 @@ async function validateSession(
   return host?.id === requester.id;
 }
 
+async function getItemQuantity(itemId: string): Promise<number> {
+  const [item] = await db
+    .select({ quantity: items.quantity })
+    .from(items)
+    .where(eq(items.id, itemId))
+    .limit(1);
+  return item?.quantity ?? 1;
+}
+
+async function getTotalAllocated(itemId: string, excludeParticipantId?: string): Promise<number> {
+  const conditions = [eq(selections.itemId, itemId)];
+  if (excludeParticipantId) {
+    conditions.push(sql`${selections.participantId} != ${excludeParticipantId}`);
+  }
+  const [result] = await db
+    .select({ total: sql<number>`coalesce(sum(${selections.quantity}), 0)` })
+    .from(selections)
+    .where(and(...conditions));
+  return result?.total ?? 0;
+}
+
 export async function POST(req: Request) {
   const sessionToken = req.headers.get("x-session-token");
   if (!sessionToken) {
@@ -92,20 +113,74 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { participantId, itemId } = parsed.data;
+  const { participantId, itemId, quantity } = parsed.data;
 
   const valid = await validateSession(participantId, sessionToken, itemId);
   if (!valid) {
     return NextResponse.json({ error: "Invalid session" }, { status: 403 });
   }
 
+  // Validate quantity doesn't exceed available
+  const itemQuantity = await getItemQuantity(itemId);
+  const alreadyAllocated = await getTotalAllocated(itemId, participantId);
+  const available = itemQuantity - alreadyAllocated;
+  if (quantity > available) {
+    return NextResponse.json(
+      { error: `Only ${available} units available to allocate` },
+      { status: 400 }
+    );
+  }
+
   const [selection] = await db
     .insert(selections)
-    .values({ participantId, itemId })
+    .values({ participantId, itemId, quantity })
     .onConflictDoNothing()
     .returning();
 
   return NextResponse.json({ selectionId: selection?.id ?? null }, { status: 201 });
+}
+
+export async function PUT(req: Request) {
+  const sessionToken = req.headers.get("x-session-token");
+  if (!sessionToken) {
+    return NextResponse.json({ error: "Missing session token" }, { status: 401 });
+  }
+
+  const body = await req.json();
+  const parsed = UpdateSelectionSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const { participantId, itemId, quantity } = parsed.data;
+
+  const valid = await validateSession(participantId, sessionToken, itemId);
+  if (!valid) {
+    return NextResponse.json({ error: "Invalid session" }, { status: 403 });
+  }
+
+  // Validate quantity doesn't exceed available
+  const itemQuantity = await getItemQuantity(itemId);
+  const alreadyAllocated = await getTotalAllocated(itemId, participantId);
+  const available = itemQuantity - alreadyAllocated;
+  if (quantity > available) {
+    return NextResponse.json(
+      { error: `Only ${available + quantity} units available to allocate` },
+      { status: 400 }
+    );
+  }
+
+  await db
+    .update(selections)
+    .set({ quantity })
+    .where(
+      and(
+        eq(selections.participantId, participantId),
+        eq(selections.itemId, itemId)
+      )
+    );
+
+  return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(req: Request) {

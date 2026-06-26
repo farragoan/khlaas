@@ -3,8 +3,8 @@ import { computeLedger } from "./compute";
 import type { LedgerItem, LedgerParticipant, LedgerSelection, LedgerPayment } from "./types";
 
 const p = (id: string): LedgerParticipant => ({ id, displayName: id });
-const item = (id: string, price: string, isFee = false): LedgerItem => ({ id, totalPrice: price, isFee });
-const sel = (participantId: string, itemId: string): LedgerSelection => ({ participantId, itemId });
+const item = (id: string, price: string, isFee = false): LedgerItem => ({ id, totalPrice: price, isFee, quantity: 1 });
+const sel = (participantId: string, itemId: string): LedgerSelection => ({ participantId, itemId, quantity: 1 });
 const pay = (participantId: string, amount: number): LedgerPayment => ({ participantId, amount });
 
 describe("computeLedger", () => {

@@ -2,6 +2,7 @@ export interface LedgerItem {
   id: string;
   totalPrice: string; // NUMERIC from DB comes as string
   isFee: boolean;
+  quantity: number;
 }
 
 export interface LedgerParticipant {
@@ -12,6 +13,7 @@ export interface LedgerParticipant {
 export interface LedgerSelection {
   participantId: string;
   itemId: string;
+  quantity: number;
 }
 
 export interface LedgerPayment {

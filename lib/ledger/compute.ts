@@ -20,16 +20,16 @@ export function computeLedger(
   const regularItems = items.filter((i) => !i.isFee);
   const feeItems = items.filter((i) => i.isFee);
 
-  // Step 1: assign regular item costs — split equally among selectors
+  // Step 1: assign regular item costs — split by allocated quantity
   for (const item of regularItems) {
-    const selectors = selections
-      .filter((s) => s.itemId === item.id)
-      .map((s) => s.participantId);
-    if (selectors.length === 0) continue;
-    const share = parseFloat(item.totalPrice) / selectors.length;
-    for (const pid of selectors) {
-      owes[pid] += share;
-      foodSubtotal[pid] += share;
+    const itemSelections = selections.filter((s) => s.itemId === item.id);
+    if (itemSelections.length === 0) continue;
+    const totalAllocated = itemSelections.reduce((sum, s) => sum + s.quantity, 0);
+    if (totalAllocated === 0) continue;
+    for (const s of itemSelections) {
+      const share = (s.quantity / totalAllocated) * parseFloat(item.totalPrice);
+      owes[s.participantId] += share;
+      foodSubtotal[s.participantId] += share;
     }
   }
 

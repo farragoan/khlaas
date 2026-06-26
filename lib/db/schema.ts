@@ -28,6 +28,7 @@ export const splitTables = pgTable(
     tip: numeric("tip", { precision: 10, scale: 2 }).default("0"),
     currency: text("currency").notNull().default("INR"),
     createdBy: text("created_by"), // Clerk userId of the table creator
+    paymentMode: text("payment_mode").$type<"host" | "split">(),
   },
   (t) => [
     uniqueIndex("idx_split_tables_share_code").on(t.shareCode),
@@ -54,6 +55,7 @@ export const items = pgTable(
     ),
     sortOrder: integer("sort_order"),
     isFee: boolean("is_fee").notNull().default(false),
+    divisible: boolean("divisible").notNull().default(true),
   },
   (t) => [index("idx_items_table_id").on(t.tableId)]
 );
@@ -84,6 +86,7 @@ export const selections = pgTable(
     itemId: uuid("item_id")
       .notNull()
       .references(() => items.id, { onDelete: "cascade" }),
+    quantity: integer("quantity").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   },
   (t) => [
@@ -138,9 +141,19 @@ export const payments = pgTable(
   ]
 );
 
+export const userProfiles = pgTable("user_profiles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  clerkUserId: text("clerk_user_id").unique().notNull(),
+  displayName: text("display_name"),
+  upiId: text("upi_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
 export type SplitTable = typeof splitTables.$inferSelect;
 export type Item = typeof items.$inferSelect;
 export type Participant = typeof participants.$inferSelect;
 export type Selection = typeof selections.$inferSelect;
 export type LedgerEntry = typeof ledgerEntries.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
+export type UserProfile = typeof userProfiles.$inferSelect;

@@ -14,6 +14,13 @@ export const JoinParticipantSchema = z.object({
 export const AddSelectionSchema = z.object({
   participantId: z.string().uuid(),
   itemId: z.string().uuid(),
+  quantity: z.number().int().min(1).max(99).default(1),
+});
+
+export const UpdateSelectionSchema = z.object({
+  participantId: z.string().uuid(),
+  itemId: z.string().uuid(),
+  quantity: z.number().int().min(1).max(99),
 });
 
 export const RemoveSelectionSchema = z.object({

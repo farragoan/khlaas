@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { payments, participants } from "@/lib/db/schema";
 import { PaymentSchema } from "@/lib/schemas";
-import { verifyHostSession } from "@/lib/auth";
+import { verifyHostSession, hashToken } from "@/lib/auth";
 import { and, eq } from "drizzle-orm";
 
 export async function POST(req: Request) {
@@ -19,20 +19,33 @@ export async function POST(req: Request) {
 
   const { tableId, participantId, amount } = parsed.data;
 
-  const host = await verifyHostSession(tableId, sessionToken);
-  if (!host) {
-    return NextResponse.json({ error: "Only the host can record payments" }, { status: 403 });
+  // Verify requester is a participant in this table
+  const hashedToken = hashToken(sessionToken);
+  const [requester] = await db
+    .select({ id: participants.id })
+    .from(participants)
+    .where(and(eq(participants.tableId, tableId), eq(participants.sessionToken, hashedToken)))
+    .limit(1);
+
+  if (!requester) {
+    return NextResponse.json({ error: "Not a participant in this table" }, { status: 403 });
   }
 
-  // Verify participant belongs to this table
-  const [participant] = await db
+  // Verify the target participant belongs to this table
+  const [targetParticipant] = await db
     .select({ id: participants.id })
     .from(participants)
     .where(and(eq(participants.id, participantId), eq(participants.tableId, tableId)))
     .limit(1);
 
-  if (!participant) {
+  if (!targetParticipant) {
     return NextResponse.json({ error: "Participant not found in this table" }, { status: 404 });
+  }
+
+  // Host can edit anyone; non-host can only edit themselves
+  const host = await verifyHostSession(tableId, sessionToken);
+  if (!host && requester.id !== participantId) {
+    return NextResponse.json({ error: "Can only edit your own payment" }, { status: 403 });
   }
 
   await db

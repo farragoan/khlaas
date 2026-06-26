@@ -4,6 +4,7 @@ import { db } from "@/lib/db/client";
 import { participants } from "@/lib/db/schema";
 import { JoinParticipantSchema } from "@/lib/schemas";
 import { hashToken } from "@/lib/auth";
+import { eq } from "drizzle-orm";
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -36,4 +37,35 @@ export async function POST(req: Request) {
     { participantId: participant.id, displayName: participant.displayName },
     { status: 201 }
   );
+}
+
+export async function PATCH(req: Request) {
+  const sessionToken = req.headers.get("x-session-token");
+  if (!sessionToken) {
+    return NextResponse.json({ error: "Missing session token" }, { status: 401 });
+  }
+
+  const body = await req.json();
+  const { displayName } = body as { displayName?: string };
+  if (!displayName || typeof displayName !== "string" || displayName.length < 1 || displayName.length > 50) {
+    return NextResponse.json({ error: "Invalid display name" }, { status: 400 });
+  }
+
+  const hashedToken = hashToken(sessionToken);
+  const [participant] = await db
+    .select({ id: participants.id })
+    .from(participants)
+    .where(eq(participants.sessionToken, hashedToken))
+    .limit(1);
+
+  if (!participant) {
+    return NextResponse.json({ error: "Invalid session" }, { status: 403 });
+  }
+
+  await db
+    .update(participants)
+    .set({ displayName })
+    .where(eq(participants.id, participant.id));
+
+  return NextResponse.json({ ok: true });
 }
