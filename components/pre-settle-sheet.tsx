@@ -58,11 +58,11 @@ export function PreSettleSheet({
 
   async function handleSubmit() {
     const paymentEntries = participants
-      .map((p) => ({ participantId: p.id, amount: parseLocalizedNumber(amounts[p.id] || "0") }))
-      .filter((e) => e.amount > 0);
+      .map((p) => ({ participantId: p.id, amount: parseLocalizedNumber(amounts[p.id] || "0") }));
 
-    if (paymentEntries.length === 0) {
-      toast.error("Enter at least one payment amount");
+    const hasAnyPayment = paymentEntries.some((e) => e.amount > 0);
+    if (!hasAnyPayment) {
+      toast.error("At least one person must have paid");
       return;
     }
 

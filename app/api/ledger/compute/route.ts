@@ -64,11 +64,22 @@ export async function POST(req: Request) {
   // Validate: all participants must have a payment entry
   const paymentMap = new Map(tablePayments.map((p) => [p.participantId, parseFloat(p.amount)]));
   const missingPayments = tableParticipants.filter(
-    (p) => !paymentMap.get(p.id) || paymentMap.get(p.id)! <= 0
+    (p) => !paymentMap.has(p.id)
   );
   if (missingPayments.length > 0) {
     return NextResponse.json(
       { error: "missing_payments", participants: missingPayments.map((p) => p.displayName) },
+      { status: 400 }
+    );
+  }
+
+  // Validate: at least one person must have paid something
+  const hasAnyPayment = tableParticipants.some(
+    (p) => (paymentMap.get(p.id) ?? 0) > 0
+  );
+  if (!hasAnyPayment) {
+    return NextResponse.json(
+      { error: "missing_payments", participants: ["At least one person must have paid"] },
       { status: 400 }
     );
   }

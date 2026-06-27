@@ -419,9 +419,12 @@ export default function TablePage({
   );
   const paymentMap = new Map(data.payments.map((p) => [p.participantId, parseFloat(p.amount)]));
   const missingPayments = participants.filter(
-    (p) => !paymentMap.get(p.id) || paymentMap.get(p.id)! <= 0
+    (p) => !paymentMap.has(p.id)
   );
-  const canSettle = unselectedItems.length === 0 && missingPayments.length === 0;
+  const hasAnyPayment = participants.some(
+    (p) => (paymentMap.get(p.id) ?? 0) > 0
+  );
+  const canSettle = unselectedItems.length === 0 && missingPayments.length === 0 && hasAnyPayment;
 
   function handleShare() {
     const url = `${window.location.origin}/t/${shareCode}`;
@@ -734,6 +737,9 @@ export default function TablePage({
                 )}
                 {missingPayments.length > 0 && (
                   <p>Missing payments: {missingPayments.map((p) => p.displayName).join(", ")}</p>
+                )}
+                {!hasAnyPayment && missingPayments.length === 0 && (
+                  <p>At least one person must have paid</p>
                 )}
               </div>
             )}

@@ -118,9 +118,9 @@ function PersonDetail({
         </div>
       </div>
 
-      {/* Consumed summary */}
+      {/* Share summary */}
       <div className="mb-4 px-4 py-3 bg-zinc-900/50 rounded-xl">
-        <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Consumed</div>
+        <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Share</div>
         <Price amount={consumed.total} className="text-xl font-bold text-zinc-100" />
       </div>
 
@@ -233,7 +233,7 @@ function PersonTotal({
           </div>
         </div>
         <div className="text-right">
-          <div className="text-xs text-zinc-500">Consumed</div>
+          <div className="text-xs text-zinc-500">Share</div>
           <Price amount={consumed.total} className="text-sm text-zinc-300 block" />
           <div className={`text-base font-semibold ${net > 0.005 ? "text-[var(--danger)]" : "text-[var(--selected)]"}`}>
             {net > 0.005 ? "Owes" : net < -0.005 ? "Gets back" : "Settled ✓"}
@@ -354,13 +354,17 @@ export default function SettlePage({
   }
 
   function handleShare() {
-    const lines = ledger
-      .map(
-        (e) =>
-          `${participantName(e.fromParticipant, participants)} pays ${participantName(e.toParticipant, participants)} ${new Intl.NumberFormat(undefined, { style: "currency", currency: table.currency ?? "INR" }).format(parseFloat(e.amount))}`
-      )
-      .join("\n");
-    const text = `Bill settled via खल्लास:\n${lines}`;
+    const fmt = new Intl.NumberFormat(undefined, { style: "currency", currency: table.currency ?? "INR" });
+    const consolidated: Record<string, number> = {};
+    for (const e of ledger) {
+      const key = `${e.fromParticipant}→${e.toParticipant}`;
+      consolidated[key] = (consolidated[key] ?? 0) + parseFloat(e.amount);
+    }
+    const lines = Object.entries(consolidated).map(([key, total]) => {
+      const [from, to] = key.split("→");
+      return `${participantName(from, participants)} pays ${participantName(to, participants)} ${fmt.format(total)}`;
+    });
+    const text = `Bill settled via खल्लास:\n${lines.join("\n")}`;
     if (navigator.share) {
       navigator.share({ text });
     } else {
@@ -568,11 +572,12 @@ export default function SettlePage({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="mt-8 flex justify-center"
+            className="mt-8 flex flex-col items-center gap-3"
           >
+            <p className="text-zinc-500 text-sm">Want to change something?</p>
             <button
               onClick={() => setShowReopenModal(true)}
-              className="flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors px-4 py-2 rounded-xl hover:bg-zinc-900"
+              className="flex items-center gap-2 px-5 py-2.5 bg-[var(--surface-raised)] hover:bg-zinc-600 text-zinc-200 text-sm font-medium rounded-xl active:scale-95 transition-all"
             >
               <RotateCcw size={14} />
               Re-open bill
