@@ -3,7 +3,7 @@
 import { use, useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Share2, Loader2, Users, Pencil, Check, Clock, ChevronDown } from "lucide-react";
+import { Share2, Loader2, Users, Pencil, Check, Clock, ChevronDown, X } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "@clerk/nextjs";
 import { nanoid } from "nanoid";
@@ -279,6 +279,7 @@ export default function TablePage({
   const [localSelections, setLocalSelections] = useState<Selection[] | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [editingParticipantId, setEditingParticipantId] = useState<string | undefined>(undefined);
+  const [showParticipantsList, setShowParticipantsList] = useState(false);
   const prevStatusRef = useRef<string | null>(null);
   const autoJoiningRef = useRef(false);
 
@@ -555,28 +556,74 @@ export default function TablePage({
 
       {/* Participants strip */}
       {participants.length > 0 && (
-        <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-1">
-          <Users size={14} className="text-zinc-500 flex-shrink-0" />
-          <div className="flex gap-2">
-            {participants.map((p) => (
-              <motion.div
-                key={p.id}
-                initial={{ x: 20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ type: "spring", damping: 18 }}
-                className={`flex-shrink-0 flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${
-                  p.id === session?.participantId
-                    ? "bg-[var(--brand)] text-black"
-                    : "bg-[var(--surface-raised)] text-zinc-300"
-                }`}
-              >
-                {isEditing && <Pencil size={10} />}
-                {p.displayName}
-              </motion.div>
-            ))}
-          </div>
-        </div>
+        <button
+          onClick={() => setShowParticipantsList(true)}
+          className="flex items-center gap-2 mb-5 px-3 py-1.5 rounded-full bg-[var(--surface-raised)] text-zinc-300 text-xs font-medium w-fit active:scale-95 transition-transform"
+        >
+          <Users size={14} className="text-zinc-500" />
+          {participants.length === 1
+            ? "1 person in this bill"
+            : `${participants.length} people in this bill`}
+        </button>
       )}
+
+      {/* Participants list sheet */}
+      <AnimatePresence>
+        {showParticipantsList && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 z-50 flex items-end justify-center"
+            onClick={() => setShowParticipantsList(false)}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg bg-[#1A1A1A] rounded-t-2xl px-4 pt-5 pb-10"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-white font-semibold">Participants</h2>
+                <button
+                  onClick={() => setShowParticipantsList(false)}
+                  className="text-zinc-500 hover:text-zinc-300 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="space-y-2">
+                {participants.map((p) => (
+                  <div
+                    key={p.id}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl ${
+                      p.id === session?.participantId
+                        ? "bg-[var(--brand)] text-black font-medium"
+                        : "bg-[var(--surface)] text-zinc-200"
+                    }`}
+                  >
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                        p.id === session?.participantId
+                          ? "bg-black/20 text-black"
+                          : "bg-zinc-700 text-zinc-200"
+                      }`}
+                    >
+                      {p.displayName[0].toUpperCase()}
+                    </div>
+                    <span className="flex-1 text-sm">{p.displayName}</span>
+                    {isEditing && editingParticipantId === p.id && (
+                      <Pencil size={12} className={p.id === session?.participantId ? "text-black" : "text-zinc-400"} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main content */}
       <AnimatePresence mode="wait">
