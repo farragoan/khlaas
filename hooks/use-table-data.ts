@@ -18,6 +18,7 @@ export interface TableData {
   selections: Selection[];
   payments: Payment[];
   ledger: LedgerEntry[];
+  isHost: boolean;
 }
 
 const MIN_INTERVAL = 2000;
@@ -39,7 +40,18 @@ export function useTableData(shareCode: string) {
 
   const fetch_ = useCallback(async () => {
     try {
-      const res = await fetch(`/api/tables/${shareCode}`);
+      const headers: Record<string, string> = {};
+      const tableId = data?.table?.id;
+      if (tableId) {
+        const raw = localStorage.getItem(`khlaas:session:${tableId}`);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw) as { sessionToken?: string };
+            if (parsed.sessionToken) headers["x-session-token"] = parsed.sessionToken;
+          } catch {}
+        }
+      }
+      const res = await fetch(`/api/tables/${shareCode}`, { headers });
       if (!res.ok) {
         setError("Table not found");
         return;

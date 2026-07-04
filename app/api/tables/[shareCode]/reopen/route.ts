@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
-import { splitTables, participants, ledgerEntries, payments } from "@/lib/db/schema";
-import { eq, asc } from "drizzle-orm";
-import { hashToken } from "@/lib/auth";
+import { splitTables, ledgerEntries, payments } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { verifyHost } from "@/lib/auth";
+import { auth } from "@clerk/nextjs/server";
 
 export async function POST(
   req: Request,
@@ -29,15 +30,9 @@ export async function POST(
     return NextResponse.json({ error: "Cannot reopen in current status" }, { status: 409 });
   }
 
-  // Verify caller is the host (first participant by joinedAt)
-  const [host] = await db
-    .select()
-    .from(participants)
-    .where(eq(participants.tableId, table.id))
-    .orderBy(asc(participants.joinedAt))
-    .limit(1);
-
-  if (!host || host.sessionToken !== hashToken(sessionToken)) {
+  const { userId } = await auth();
+  const host = await verifyHost(table.id, { sessionToken, clerkUserId: userId });
+  if (!host) {
     return NextResponse.json({ error: "Only the host can reopen a bill" }, { status: 403 });
   }
 

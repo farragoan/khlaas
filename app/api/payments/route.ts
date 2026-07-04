@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { payments, participants } from "@/lib/db/schema";
 import { PaymentSchema } from "@/lib/schemas";
-import { verifyHostSession, hashToken } from "@/lib/auth";
+import { verifyHost, hashToken } from "@/lib/auth";
+import { auth } from "@clerk/nextjs/server";
 import { and, eq } from "drizzle-orm";
 
 export async function POST(req: Request) {
@@ -43,7 +44,8 @@ export async function POST(req: Request) {
   }
 
   // Host can edit anyone; non-host can only edit themselves
-  const host = await verifyHostSession(tableId, sessionToken);
+  const { userId } = await auth();
+  const host = await verifyHost(tableId, { sessionToken, clerkUserId: userId });
   if (!host && requester.id !== participantId) {
     return NextResponse.json({ error: "Can only edit your own payment" }, { status: 403 });
   }
