@@ -30,11 +30,12 @@ export async function GET(
         userId: participants.userId,
         upiId: participants.upiId,
         joinedAt: participants.joinedAt,
+        splitsSubmittedAt: participants.splitsSubmittedAt,
       })
       .from(participants)
       .where(eq(participants.tableId, table.id))
       .catch(() =>
-        // upi_id column not yet migrated — fall back without it
+        // upi_id / splits_submitted_at columns not yet migrated — fall back without them
         db
           .select({
             id: participants.id,
@@ -45,7 +46,8 @@ export async function GET(
           })
           .from(participants)
           .where(eq(participants.tableId, table.id))
-          .then((rows) => rows.map((r) => ({ ...r, upiId: null as string | null })))
+          .then((rows) => rows.map((r) => ({ ...r, upiId: null as string | null, splitsSubmittedAt: null as Date | null }))
+          )
       ),
   ]);
 
