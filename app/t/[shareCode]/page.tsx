@@ -278,6 +278,7 @@ export default function TablePage({
   const { isSignedIn, user } = useUser();
   const [localSelections, setLocalSelections] = useState<Selection[] | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
+  const [showShareOverlay, setShowShareOverlay] = useState(false);
   const [editingParticipantId, setEditingParticipantId] = useState<string | undefined>(undefined);
   const [showParticipantsList, setShowParticipantsList] = useState(false);
   const prevStatusRef = useRef<string | null>(null);
@@ -429,13 +430,8 @@ export default function TablePage({
   const canSettle = unselectedItems.length === 0 && missingPayments.length === 0 && hasAnyPayment;
 
   function handleShare() {
-    const url = `${window.location.origin}/t/${shareCode}`;
-    if (navigator.share) {
-      navigator.share({ title: "Split this bill on खल्लास", url });
-    } else {
-      navigator.clipboard.writeText(url);
-      toast.success("Link copied!");
-    }
+    if (phase === "share") return; // inline share step is already showing this UI
+    setShowShareOverlay(true);
   }
 
   async function handleSettleClick() {
@@ -716,7 +712,10 @@ export default function TablePage({
             <ShareRoomSheet
               shareCode={shareCode}
               participants={participants}
-              onContinue={() => setPhase("items")}
+              onContinue={() => {
+                setPhase("items");
+                setShowShareOverlay(false);
+              }}
             />
           </motion.div>
         )}
@@ -859,6 +858,19 @@ export default function TablePage({
             </div>
           )}
         </>
+      )}
+
+      {/* Share overlay — triggered by header Share button */}
+      {showShareOverlay && phase !== "share" && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#0F0F0F] w-full max-w-lg rounded-t-3xl sm:rounded-2xl p-6 max-h-[85vh] overflow-y-auto">
+            <ShareRoomSheet
+              shareCode={shareCode}
+              participants={participants}
+              onContinue={() => setShowShareOverlay(false)}
+            />
+          </div>
+        </div>
       )}
 
       {/* Join modal — only for guests (non-signed-in users) */}
