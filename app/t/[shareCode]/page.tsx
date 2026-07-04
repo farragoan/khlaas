@@ -290,6 +290,7 @@ export default function TablePage({
   const [hostUpiId, setHostUpiId] = useState("");
   const [currency, setCurrency] = useState("INR");
   const [hostName, setHostName] = useState("");
+  const [splitsSubmitted, setSplitsSubmitted] = useState(false);
 
   const hostTip = wantTip ? parseLocalizedNumber(tipInput || "0") : 0;
 
@@ -703,6 +704,9 @@ export default function TablePage({
                       {p.displayName[0].toUpperCase()}
                     </div>
                     <span className="text-zinc-200 text-sm flex-1">{p.displayName}</span>
+                    {isHost && p.splitsSubmittedAt && (
+                      <Check size={14} className="text-emerald-400 flex-shrink-0" />
+                    )}
                     {canEdit ? (
                       <PaymentInput
                         participantId={p.id}
@@ -754,15 +758,67 @@ export default function TablePage({
         </div>
       )}
 
-      {/* Non-host waiting message in edit mode */}
+      {/* Non-host submit splits / success state */}
       {showItems && !isHost && phase === "items" && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0F0F0F]/90 backdrop-blur-sm border-t border-zinc-800">
-          <div className="max-w-lg mx-auto">
-            <p className="text-center text-zinc-500 text-sm">
-              Waiting for {participants[0]?.displayName ?? "host"} to settle up…
-            </p>
-          </div>
-        </div>
+        <>
+          {splitsSubmitted || participants.find((p) => p.id === session?.participantId)?.splitsSubmittedAt ? (
+            <motion.div
+              key="submitted-success"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+              className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0F0F0F] px-6 text-center gap-4"
+            >
+              <motion.div
+                animate={{ scale: [1, 1.15, 1] }}
+                transition={{ duration: 0.5, ease: "easeInOut" }}
+                className="w-16 h-16 rounded-full bg-[var(--brand)]/20 flex items-center justify-center"
+              >
+                <Check size={32} className="text-[var(--brand)]" />
+              </motion.div>
+              <div className="space-y-1">
+                <h2 className="text-white font-semibold text-lg">You&apos;re all set!</h2>
+                <p className="text-zinc-400 text-sm">
+                  Your splits are in — go relax, we&apos;ll let everyone know when it&apos;s time to settle up.
+                </p>
+              </div>
+              <button
+                onClick={() => setSplitsSubmitted(false)}
+                className="mt-4 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                edit my splits
+              </button>
+            </motion.div>
+          ) : (
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0F0F0F]/90 backdrop-blur-sm border-t border-zinc-800">
+              <div className="max-w-lg mx-auto">
+                <button
+                  onClick={async () => {
+                    if (!session) return;
+                    try {
+                      const res = await fetch("/api/participants", {
+                        method: "PATCH",
+                        headers: {
+                          "Content-Type": "application/json",
+                          "x-session-token": session.sessionToken,
+                        },
+                        body: JSON.stringify({ submitted: true }),
+                      });
+                      if (!res.ok) throw new Error("Failed");
+                      setSplitsSubmitted(true);
+                      refresh();
+                    } catch {
+                      toast.error("Failed to submit splits, try again");
+                    }
+                  }}
+                  className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all"
+                >
+                  Submit splits
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Join modal — only for guests (non-signed-in users) */}
