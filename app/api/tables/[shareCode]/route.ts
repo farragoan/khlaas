@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { splitTables, items, participants, selections, ledgerEntries, payments } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { hashToken } from "@/lib/auth";
+import { verifyHost } from "@/lib/auth";
+import { auth } from "@clerk/nextjs/server";
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ shareCode: string }> }
 ) {
   const { shareCode } = await params;
@@ -63,6 +64,10 @@ export async function GET(
       : Promise.resolve([]),
   ]);
 
+  const sessionToken = req.headers.get("x-session-token");
+  const { userId } = await auth();
+  const hostParticipant = await verifyHost(table.id, { sessionToken, clerkUserId: userId });
+
   const response = NextResponse.json({
     table,
     items: tableItems,
@@ -70,6 +75,7 @@ export async function GET(
     selections: tableSelections,
     payments: tablePayments,
     ledger: tableLedger,
+    isHost: !!hostParticipant,
   });
 
   response.headers.set("Cache-Control", "public, s-maxage=2, stale-while-revalidate=5");
@@ -97,37 +103,9 @@ export async function PATCH(
     return NextResponse.json({ error: "Table not found" }, { status: 404 });
   }
 
-  // Verify host
-  const hashedToken = hashToken(sessionToken);
-  const [host] = await db
-    .select({ id: participants.id })
-    .from(participants)
-    .where(eq(participants.tableId, table.id))
-    .orderBy(participants.joinedAt)
-    .limit(1);
-
+  const { userId } = await auth();
+  const host = await verifyHost(table.id, { sessionToken, clerkUserId: userId });
   if (!host) {
-    return NextResponse.json({ error: "No host found" }, { status: 403 });
-  }
-
-  const [hostParticipant] = await db
-    .select({ id: participants.id })
-    .from(participants)
-    .where(eq(participants.id, host.id))
-    .limit(1);
-
-  if (!hostParticipant || hostParticipant.id !== host.id) {
-    return NextResponse.json({ error: "Invalid session" }, { status: 403 });
-  }
-
-  // Simple host validation: check session token matches any participant in this table who is the host
-  const [requester] = await db
-    .select({ id: participants.id })
-    .from(participants)
-    .where(eq(participants.sessionToken, hashedToken))
-    .limit(1);
-
-  if (!requester || requester.id !== host.id) {
     return NextResponse.json({ error: "Only the host can update the table" }, { status: 403 });
   }
 

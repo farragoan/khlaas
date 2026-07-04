@@ -406,7 +406,7 @@ export default function TablePage({
 
   const { table, items, participants, selections } = data;
   const activeSelections = localSelections ?? selections;
-  const isHost = !!session && participants[0]?.id === session.participantId;
+  const isHost = data.isHost;
   // Phase 6: Host always sees edit mode when items are ready
   const isEditing = table.status === "editing" || (isHost && table.status === "items_ready");
 

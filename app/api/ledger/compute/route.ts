@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { splitTables, items, participants, selections, ledgerEntries, payments } from "@/lib/db/schema";
 import { ComputeLedgerSchema } from "@/lib/schemas";
-import { verifyHostSession } from "@/lib/auth";
+import { verifyHost } from "@/lib/auth";
+import { auth } from "@clerk/nextjs/server";
 import { eq } from "drizzle-orm";
 import { computeLedger } from "@/lib/ledger/compute";
 
@@ -20,7 +21,8 @@ export async function POST(req: Request) {
 
   const { tableId, tip } = parsed.data;
 
-  const host = await verifyHostSession(tableId, sessionToken);
+  const { userId } = await auth();
+  const host = await verifyHost(tableId, { sessionToken, clerkUserId: userId });
   if (!host) {
     return NextResponse.json({ error: "Only the host can settle the bill" }, { status: 403 });
   }
