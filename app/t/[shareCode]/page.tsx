@@ -428,6 +428,7 @@ export default function TablePage({
   const canSettle = unselectedItems.length === 0 && missingPayments.length === 0 && hasAnyPayment;
 
   function handleShare() {
+    if (phase === "share") return; // inline share step is already showing this UI
     setShowShareOverlay(true);
   }
 
@@ -655,7 +656,10 @@ export default function TablePage({
             <ShareRoomSheet
               shareCode={shareCode}
               participants={participants}
-              onContinue={() => setPhase("items")}
+              onContinue={() => {
+                setPhase("items");
+                setShowShareOverlay(false);
+              }}
             />
           </motion.div>
         )}
