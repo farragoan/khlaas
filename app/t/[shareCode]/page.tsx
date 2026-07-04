@@ -278,6 +278,7 @@ export default function TablePage({
   const { isSignedIn, user } = useUser();
   const [localSelections, setLocalSelections] = useState<Selection[] | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
+  const [showShareOverlay, setShowShareOverlay] = useState(false);
   const [editingParticipantId, setEditingParticipantId] = useState<string | undefined>(undefined);
   const prevStatusRef = useRef<string | null>(null);
   const autoJoiningRef = useRef(false);
@@ -427,13 +428,7 @@ export default function TablePage({
   const canSettle = unselectedItems.length === 0 && missingPayments.length === 0 && hasAnyPayment;
 
   function handleShare() {
-    const url = `${window.location.origin}/t/${shareCode}`;
-    if (navigator.share) {
-      navigator.share({ title: "Split this bill on खल्लास", url });
-    } else {
-      navigator.clipboard.writeText(url);
-      toast.success("Link copied!");
-    }
+    setShowShareOverlay(true);
   }
 
   async function handleSettleClick() {
@@ -761,6 +756,19 @@ export default function TablePage({
             <p className="text-center text-zinc-500 text-sm">
               Waiting for {participants[0]?.displayName ?? "host"} to settle up…
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Share overlay — triggered by header Share button */}
+      {showShareOverlay && phase !== "share" && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#0F0F0F] w-full max-w-lg rounded-t-3xl sm:rounded-2xl p-6 max-h-[85vh] overflow-y-auto">
+            <ShareRoomSheet
+              shareCode={shareCode}
+              participants={participants}
+              onContinue={() => setShowShareOverlay(false)}
+            />
           </div>
         </div>
       )}
