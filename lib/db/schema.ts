@@ -72,6 +72,7 @@ export const participants = pgTable(
     sessionToken: text("session_token"),
     upiId: text("upi_id"),
     joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow(),
+    splitsSubmittedAt: timestamp("splits_submitted_at", { withTimezone: true }),
   },
   (t) => [index("idx_participants_table_id").on(t.tableId)]
 );
