@@ -20,13 +20,14 @@ No schema migration needed — `participants.userId` and `splitTables.createdBy`
 - [x] Frontend: replaced the two positional `isHost` computations with the server-provided flag
 - [ ] Open design question, not yet decided: should a signed-in host who created the table but never joined as a participant be auto-joined, or shown a "reclaim host" action? Current behavior: not host until they join.
 
-### API Rate Limiting _(P1)_
-**PRD:** `docs/PRDs/security-rate-limiting.md`
+### API Rate Limiting ✓ _(P1)_
+_Shipped: 2026-07-04_ · plan: `docs/plans/rate-limiting.md` · **PRD:** `docs/PRDs/security-rate-limiting.md`
 
-Upstash Redis + `@upstash/ratelimit` middleware. Strict limits on `/api/receipts` (3/min) and `/api/participants` (10/min) to prevent abuse and AI API credit drain.
-- [ ] Install `@upstash/ratelimit` + `@upstash/redis`
-- [ ] `middleware.ts` with per-route sliding window limits
-- [ ] Provision Upstash (free tier) and add env vars to Netlify
+Sliding-window per-IP limits in `middleware.ts`: `/api/receipts` 3/min, `/api/participants` 10/min, `POST /api/tables` 5/min, all other `/api/*` 60/min.
+- [x] Install `@upstash/ratelimit` + `@upstash/redis`
+- [x] `middleware.ts` with per-route sliding window limits, layered alongside Clerk's existing passive middleware (unchanged)
+- [x] `lib/rate-limit.ts` — uses real Upstash Redis when `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` are set, falls back to an in-memory sliding window otherwise (per-instance only, documented limitation)
+- [ ] Provision Upstash (free tier) and add env vars to Netlify — **user action**, see `docs/user-actions.md` §4
 
 ### Session Token Hashing _(P1)_
 **PRD:** `docs/PRDs/security-session-hardening.md`
@@ -113,8 +114,10 @@ _Shipped: 2026-06-24_
 
 ## V2 (Post-Auth)
 
-### Bill History
-- [ ] `/history` page listing all tables the user participated in
+### Bill History _(partial — verified 2026-07-04, highest priority remaining item)_
+Backend-only so far, in the untouched worktree `.claude/worktrees/feat+bill-history` (branch `worktree-feat+bill-history`, not merged): `GET /api/history` (paginated, cursor-based, 4-way parallel enrichment) and a new `idx_split_tables_created_by` index on `splitTables` in `lib/db/schema.ts`. Missing before this can ship:
+- [ ] Generate the drizzle migration for `idx_split_tables_created_by` (nothing past `drizzle/0005_add_payment_mode.sql` exists yet — this index was never migrated)
+- [ ] `/history` page listing all tables the user participated in (no frontend exists at all yet)
 - [ ] Cross-bill balance with a friend ("you owe Arjun ₹X across 3 bills")
 
 ### Groups
@@ -125,6 +128,15 @@ _Shipped: 2026-06-24_
 ---
 
 ## Shipped
+
+### Table Page UX Fixes ✓
+_Shipped: 2026-07-04_
+
+Four independent fixes merged from separate worktrees, all touching `app/t/[shareCode]/page.tsx`:
+- Async split submission for non-host participants (`feat/async-split-submission`) — new `splitsSubmittedAt` field, `POST /api/participants` and `GET /api/tables/[shareCode]` updated
+- Snackbar instead of a persistent red validation banner on settle attempt (`fix/incomplete-snackbar`)
+- Participant name strip collapses into a tappable counter (`fix/participant-counter-strip`)
+- Share overlay no longer re-appears after the inline share step, and opens correctly from the header Share button (`fix/share-sheet-trigger`)
 
 ### Clerk Auth with Optional Guest Flow ✓
 _Shipped: 2026-04-26_
