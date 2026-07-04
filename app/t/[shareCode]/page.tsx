@@ -437,7 +437,15 @@ export default function TablePage({
   }
 
   async function handleSettleClick() {
-    if (!session || !canSettle) return;
+    if (!session) return;
+    if (!canSettle) {
+      const reasons: string[] = [];
+      if (unselectedItems.length > 0) reasons.push(`Unassigned items: ${unselectedItems.map((i) => i.name).join(", ")}`);
+      if (missingPayments.length > 0) reasons.push(`Missing payments from: ${missingPayments.map((p) => p.displayName).join(", ")}`);
+      if (!hasAnyPayment && missingPayments.length === 0) reasons.push("At least one person must have paid");
+      toast.error(reasons.length > 0 ? reasons.join(". ") : "This bill is incomplete");
+      return;
+    }
 
     // Save UPI ID to user profile if provided
     if (hostUpiId.trim()) {
@@ -729,24 +737,9 @@ export default function TablePage({
       {showItems && phase === "items" && isHost && (
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0F0F0F]/90 backdrop-blur-sm border-t border-zinc-800">
           <div className="max-w-lg mx-auto">
-            {/* Validation errors */}
-            {!canSettle && (
-              <div className="text-red-400 text-xs space-y-1 mb-2 px-1">
-                {unselectedItems.length > 0 && (
-                  <p>Unassigned: {unselectedItems.map((i) => i.name).join(", ")}</p>
-                )}
-                {missingPayments.length > 0 && (
-                  <p>Missing payments: {missingPayments.map((p) => p.displayName).join(", ")}</p>
-                )}
-                {!hasAnyPayment && missingPayments.length === 0 && (
-                  <p>At least one person must have paid</p>
-                )}
-              </div>
-            )}
             <button
               onClick={handleSettleClick}
-              disabled={!canSettle}
-              className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-40"
+              className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all"
             >
               Settle up →
             </button>
