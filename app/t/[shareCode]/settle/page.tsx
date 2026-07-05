@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useTableData } from "@/hooks/use-table-data";
 import { useSession } from "@/hooks/use-session";
 import { Price } from "@/components/price";
+import { SettleSkeleton } from "@/components/settle-skeleton";
 import { CurrencyProvider } from "@/lib/currency-context";
 import { UpiAppModal } from "@/components/upi-app-modal";
 import type { LedgerEntry, Payment, Item } from "@/lib/db/schema";
@@ -333,11 +334,7 @@ export default function SettlePage({
   }, [data?.table?.status, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading || !data) {
-    return (
-      <div className="min-h-dvh bg-[#0F0F0F] flex items-center justify-center">
-        <div className="animate-pulse text-zinc-600">Loading…</div>
-      </div>
-    );
+    return <SettleSkeleton />;
   }
 
   const { table, participants, ledger, payments, items, selections } = data;

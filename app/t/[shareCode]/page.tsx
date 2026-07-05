@@ -3,12 +3,13 @@
 import { use, useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Share2, Loader2, Users, Pencil, Check, Clock, ChevronDown, X } from "lucide-react";
+import { Share2, Users, Pencil, Check, Clock, ChevronDown, X } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "@clerk/nextjs";
 import { nanoid } from "nanoid";
 import { useTableData } from "@/hooks/use-table-data";
 import { useSession } from "@/hooks/use-session";
+import { TableSkeleton } from "@/components/table-skeleton";
 import { ParticipantJoin } from "@/components/participant-join";
 import { ReceiptUpload } from "@/components/receipt-upload";
 import { ProcessingState } from "@/components/processing-state";
@@ -392,11 +393,7 @@ export default function TablePage({
   }, [data, session]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-dvh bg-[#0F0F0F]">
-        <Loader2 className="animate-spin text-zinc-600" size={32} />
-      </div>
-    );
+    return <TableSkeleton />;
   }
 
   if (error || !data) {
