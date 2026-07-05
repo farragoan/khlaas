@@ -4,11 +4,14 @@ import { selections, participants, items, splitTables } from "@/lib/db/schema";
 import { AddSelectionSchema, UpdateSelectionSchema, RemoveSelectionSchema } from "@/lib/schemas";
 import { eq, and, asc, sql } from "drizzle-orm";
 import { hashToken } from "@/lib/auth";
+import { auth } from "@clerk/nextjs/server";
 
 /**
  * Validate that the session is allowed to write a selection for `participantId` on `itemId`.
  *
  * Normal case: the session token directly belongs to the participant.
+ * Signed-in participant bypass: the requester has a Clerk userId and is a participant in
+ * this table — allowed to edit anyone's selections.
  * Host-override case (editing/items_ready): the session token belongs to the table's host
  * (participants[0]) and the table is currently in `editing` or `items_ready` status.
  */
@@ -32,6 +35,46 @@ async function validateSession(
     .limit(1);
 
   if (direct) return true;
+
+  // Signed-in participant bypass: if the requester has a Clerk userId and is
+  // a participant in this table, they can edit anyone's selections.
+  const { userId: clerkUserId } = await auth();
+  if (clerkUserId) {
+    const [item] = await db
+      .select({ tableId: items.tableId })
+      .from(items)
+      .where(eq(items.id, itemId))
+      .limit(1);
+    if (!item) return false;
+
+    const [table] = await db
+      .select({ status: splitTables.status })
+      .from(splitTables)
+      .where(eq(splitTables.id, item.tableId))
+      .limit(1);
+    if (!table || (table.status !== "editing" && table.status !== "items_ready")) return false;
+
+    const [requester] = await db
+      .select({ id: participants.id, tableId: participants.tableId })
+      .from(participants)
+      .where(
+        and(
+          eq(participants.tableId, item.tableId),
+          eq(participants.userId, clerkUserId)
+        )
+      )
+      .limit(1);
+    if (!requester) return false;
+
+    const [target] = await db
+      .select({ tableId: participants.tableId })
+      .from(participants)
+      .where(eq(participants.id, participantId))
+      .limit(1);
+    if (!target || target.tableId !== item.tableId) return false;
+
+    return true;
+  }
 
   // Host bypass: allowed when table is in editing or items_ready mode
   const [item] = await db
