@@ -445,7 +445,7 @@ export default function TablePage({
       return;
     }
 
-    // Save UPI ID to user profile if provided
+    // Save UPI ID to user profile if provided (fire-and-forget, runs concurrently with compute)
     if (hostUpiId.trim()) {
       fetch("/api/user-profile", {
         method: "PUT",
@@ -478,31 +478,38 @@ export default function TablePage({
   }
 
   function handleContinue() {
-    // Save host name to profile + participant record
+    // Save host name, currency, and paymentMode in parallel (all independent fire-and-forget)
+    const saves: Promise<Response>[] = [];
+
     if (hostName.trim() && session) {
-      fetch("/api/user-profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ displayName: hostName.trim() }),
-      }).catch(() => {});
-      fetch("/api/participants", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-session-token": session.sessionToken },
-        body: JSON.stringify({ displayName: hostName.trim() }),
-      }).catch(() => {});
+      saves.push(
+        fetch("/api/user-profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ displayName: hostName.trim() }),
+        }),
+        fetch("/api/participants", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "x-session-token": session.sessionToken },
+          body: JSON.stringify({ displayName: hostName.trim() }),
+        })
+      );
     }
 
-    // Save currency + paymentMode to table if changed
     const updates: Record<string, string> = {};
     if (currency !== table.currency) updates.currency = currency;
     if (paymentMode && paymentMode !== table.paymentMode) updates.paymentMode = paymentMode;
     if (Object.keys(updates).length > 0) {
-      fetch(`/api/tables/${shareCode}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-session-token": session?.sessionToken ?? "" },
-        body: JSON.stringify(updates),
-      }).catch(() => {});
+      saves.push(
+        fetch(`/api/tables/${shareCode}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "x-session-token": session?.sessionToken ?? "" },
+          body: JSON.stringify(updates),
+        })
+      );
     }
+
+    Promise.all(saves).catch(() => {});
 
     // Always go straight to share — no processing screen
     setPhase("share");
