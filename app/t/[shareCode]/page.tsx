@@ -294,6 +294,8 @@ export default function TablePage({
   const [currency, setCurrency] = useState("INR");
   const [hostName, setHostName] = useState("");
   const [splitsSubmitted, setSplitsSubmitted] = useState(false);
+  const [useDiscount, setUseDiscount] = useState(false);
+  const [discountTotalInput, setDiscountTotalInput] = useState("");
 
   const hostTip = wantTip ? parseLocalizedNumber(tipInput || "0") : 0;
 
@@ -347,6 +349,14 @@ export default function TablePage({
       setPaymentMode(data.table.paymentMode);
     }
   }, [data?.table?.paymentMode]);
+
+  // Sync discount state from table data
+  useEffect(() => {
+    if (data?.table?.actualPaidTotal) {
+      setUseDiscount(true);
+      setDiscountTotalInput(String(parseFloat(data.table.actualPaidTotal)));
+    }
+  }, [data?.table?.actualPaidTotal]);
 
   // Auto-join signed-in users (skip join modal)
   useEffect(() => {
@@ -745,6 +755,76 @@ export default function TablePage({
             {/* Payments section */}
             <div className="space-y-3 mt-6">
               <p className="text-xs text-zinc-500 uppercase tracking-wider px-1">Who paid?</p>
+
+              {/* Discount toggle (host only) */}
+              {isHost && (
+                <div className="bg-[var(--surface)] rounded-xl px-4 py-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm text-zinc-200">Paid via deal?</p>
+                    <button
+                      onClick={() => {
+                        const next = !useDiscount;
+                        setUseDiscount(next);
+                        if (!next) {
+                          // Clear discount — save null to table
+                          setDiscountTotalInput("");
+                          fetch(`/api/tables/${shareCode}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json", "x-session-token": session?.sessionToken ?? "" },
+                            body: JSON.stringify({ actualPaidTotal: null }),
+                          }).catch(() => {});
+                        }
+                      }}
+                      className={`relative w-10 h-5 rounded-full transition-colors ${
+                        useDiscount ? "bg-[var(--brand)]" : "bg-zinc-700"
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                          useDiscount ? "translate-x-5" : ""
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  <AnimatePresence>
+                    {useDiscount && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="flex items-center gap-2 bg-[var(--surface-raised)] rounded-xl px-4 py-2.5 mt-2">
+                          <span className="text-zinc-400 text-sm">Actual paid</span>
+                          <span className="text-zinc-400 text-sm">{getCurrencySymbol(currency)}</span>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="0"
+                            value={discountTotalInput}
+                            onChange={(e) => {
+                              setDiscountTotalInput(e.target.value);
+                              const v = parseLocalizedNumber(e.target.value || "0");
+                              if (v > 0 && v <= billTotal) {
+                                fetch(`/api/tables/${shareCode}`, {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json", "x-session-token": session?.sessionToken ?? "" },
+                                  body: JSON.stringify({ actualPaidTotal: v }),
+                                }).catch(() => {});
+                              }
+                            }}
+                            className="flex-1 bg-transparent text-zinc-100 text-sm text-right outline-none"
+                          />
+                        </div>
+                        <p className="text-xs text-zinc-500 mt-1.5">
+                          Original bill: {getCurrencySymbol(currency)}{billTotal.toFixed(2)}
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
               {participants.map((p) => {
                 const canEdit = isHost || p.id === session?.participantId;
                 const payment = data.payments.find((pay) => pay.participantId === p.id);

@@ -30,7 +30,8 @@ function computeConsumed(
   regularItems: Item[],
   feeItems: Item[],
   selections: Selection[],
-  tip: number
+  tip: number,
+  discountRatio?: number | null
 ) {
   // Food subtotals by participant (quantity-weighted)
   const foodSubtotals: Record<string, number> = {};
@@ -54,11 +55,15 @@ function computeConsumed(
   const myFeeShare = totalFees * proportion;
   const myTipShare = tip * proportion;
 
+  const r = discountRatio ?? 1;
+  const scaledFood = myFoodSubtotal * r;
+  const scaledFees = myFeeShare * r;
+
   return {
-    food: myFoodSubtotal,
-    fees: myFeeShare,
+    food: scaledFood,
+    fees: scaledFees,
     tip: myTipShare,
-    total: myFoodSubtotal + myFeeShare + myTipShare,
+    total: scaledFood + scaledFees + myTipShare,
     proportion,
   };
 }
@@ -69,6 +74,7 @@ function PersonDetail({
   selections,
   payments,
   tip,
+  discountRatio,
   onClose,
 }: {
   participant: PublicParticipant;
@@ -76,12 +82,13 @@ function PersonDetail({
   selections: Selection[];
   payments: Payment[];
   tip: number;
+  discountRatio?: number | null;
   onClose: () => void;
 }) {
   const regularItems = items.filter((i) => !i.isFee);
   const feeItems = items.filter((i) => i.isFee);
 
-  const consumed = computeConsumed(participant.id, regularItems, feeItems, selections, tip);
+  const consumed = computeConsumed(participant.id, regularItems, feeItems, selections, tip, discountRatio);
 
   const myFoodRows = regularItems
     .filter((i) => selections.some((s) => s.itemId === i.id && s.participantId === participant.id))
@@ -192,6 +199,7 @@ function PersonTotal({
   selections,
   payments,
   tip,
+  discountRatio,
   index,
   onClick,
 }: {
@@ -201,12 +209,13 @@ function PersonTotal({
   selections: Selection[];
   payments: Payment[];
   tip: number;
+  discountRatio?: number | null;
   index: number;
   onClick: () => void;
 }) {
   const regularItems = items.filter((i) => !i.isFee);
   const feeItems = items.filter((i) => i.isFee);
-  const consumed = computeConsumed(participant.id, regularItems, feeItems, selections, tip);
+  const consumed = computeConsumed(participant.id, regularItems, feeItems, selections, tip, discountRatio);
 
   const owes = entries.filter((e) => e.fromParticipant === participant.id);
   const receives = entries.filter((e) => e.toParticipant === participant.id);
@@ -339,6 +348,10 @@ export default function SettlePage({
 
   const { table, participants, ledger, payments, items, selections } = data;
   const tip = parseFloat(table.tip ?? "0");
+
+  const billTotal = items.reduce((sum, i) => sum + parseFloat(i.totalPrice ?? "0"), 0);
+  const actualPaidTotal = table.actualPaidTotal ? parseFloat(table.actualPaidTotal) : null;
+  const discountRatio = actualPaidTotal != null && billTotal > 0 ? actualPaidTotal / billTotal : null;
   const isHost = data.isHost;
 
   // Show UPI prompt if current user is owed money but has no UPI ID
@@ -471,6 +484,7 @@ export default function SettlePage({
               selections={selections}
               payments={payments}
               tip={tip}
+              discountRatio={discountRatio}
               index={i}
               onClick={() => setDetailParticipant(p)}
             />
@@ -592,6 +606,7 @@ export default function SettlePage({
             selections={selections}
             payments={payments}
             tip={tip}
+            discountRatio={discountRatio}
             onClose={() => setDetailParticipant(null)}
           />
         )}
