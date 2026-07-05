@@ -26,15 +26,43 @@
     {
       "idx": 3,
       "version": "7",
-      "when": 1783254358516,
-      "tag": "0003_skinny_proemial_gods",
+      "when": 1783254290870,
+      "tag": "0003_add_user_profiles",
       "breakpoints": true
     },
     {
       "idx": 4,
       "version": "7",
+      "when": 1783254290871,
+      "tag": "0004_add_selection_quantity",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1783254290872,
+      "tag": "0005_add_payment_mode",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783254290873,
+      "tag": "0006_add_splits_submitted_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
       "when": 1783255972252,
       "tag": "0007_complete_crystal",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1783254358516,
+      "tag": "0008_skinny_proemial_gods",
       "breakpoints": true
     }
   ]
