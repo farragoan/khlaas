@@ -16,6 +16,7 @@ interface ItemListProps {
   onSelectionsChange: (selections: Selection[]) => void;
   isEditMode?: boolean;
   isHost?: boolean;
+  canEditOthers?: boolean;
   editingParticipantId?: string;
   onEditingParticipantChange?: (id: string) => void;
 }
@@ -28,6 +29,7 @@ export function ItemList({
   onSelectionsChange,
   isEditMode = false,
   isHost = false,
+  canEditOthers = false,
   editingParticipantId,
   onEditingParticipantChange,
 }: ItemListProps) {
@@ -80,6 +82,10 @@ export function ItemList({
   }
 
   async function toggle(item: Item) {
+    if (!canEditOthers && activeParticipantId !== session.participantId) {
+      toast("Signed in users can edit bills for everyone.");
+      return;
+    }
     const selected = isSelected(item.id);
     const prev = localSelections;
 
@@ -148,6 +154,10 @@ export function ItemList({
   }
 
   async function updateQuantity(item: Item, newQuantity: number) {
+    if (!canEditOthers && activeParticipantId !== session.participantId) {
+      toast("Signed in users can edit bills for everyone.");
+      return;
+    }
     const prev = localSelections;
 
     // Optimistic update
@@ -189,7 +199,7 @@ export function ItemList({
   return (
     <div className="space-y-6">
       {/* Host participant switcher (edit mode only) */}
-      {isEditMode && isHost && participants.length > 1 && (
+      {isEditMode && canEditOthers && participants.length > 1 && (
         <div className="space-y-1">
           <p className="text-xs text-zinc-500 uppercase tracking-wider px-1">Editing for</p>
           <div className="flex flex-wrap gap-2">
@@ -212,7 +222,7 @@ export function ItemList({
       )}
 
       {/* Non-host in edit mode: show whose context is active */}
-      {isEditMode && !isHost && (
+      {isEditMode && !canEditOthers && (
         <p className="text-xs text-zinc-500 text-center">
           Editing your selections — host will close edit mode when ready
         </p>

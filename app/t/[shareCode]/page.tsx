@@ -413,6 +413,11 @@ export default function TablePage({
   // Phase 6: Host always sees edit mode when items are ready
   const isEditing = table.status === "editing" || (isHost && table.status === "items_ready");
 
+  const currentParticipant = session
+    ? participants.find((p) => p.id === session.participantId)
+    : null;
+  const canEditOthers = isHost || (isSignedIn && !!currentParticipant?.userId);
+
   const billTotal = items.reduce((sum, i) => sum + parseFloat(i.totalPrice ?? "0"), 0);
 
   // Validation: all items must be selected, all payments must be filled
@@ -740,8 +745,9 @@ export default function TablePage({
                 onSelectionsChange={setLocalSelections}
                 isEditMode={isEditing}
                 isHost={isHost}
+                canEditOthers={canEditOthers}
                 editingParticipantId={isEditing ? editingParticipantId : undefined}
-                onEditingParticipantChange={isEditing && isHost ? setEditingParticipantId : undefined}
+                onEditingParticipantChange={isEditing && canEditOthers ? setEditingParticipantId : undefined}
               />
             )}
 
@@ -749,7 +755,7 @@ export default function TablePage({
             <div className="space-y-3 mt-6">
               <p className="text-xs text-zinc-500 uppercase tracking-wider px-1">Who paid?</p>
               {participants.map((p) => {
-                const canEdit = isHost || p.id === session?.participantId;
+                const canEdit = canEditOthers || p.id === session?.participantId;
                 const payment = data.payments.find((pay) => pay.participantId === p.id);
                 const amount = payment ? parseFloat(payment.amount) : 0;
                 return (
