@@ -122,6 +122,22 @@ export async function PATCH(
     updates.paymentMode = body.paymentMode;
   }
 
+  if (body.actualPaidTotal === null) {
+    updates.actualPaidTotal = null;
+  } else if (typeof body.actualPaidTotal === "number" && body.actualPaidTotal >= 0) {
+    const tableItems = await db.select().from(items).where(eq(items.tableId, table.id));
+    const billTotal = tableItems.reduce((sum, i) => sum + parseFloat(i.totalPrice ?? "0"), 0);
+    if (billTotal > 0 && body.actualPaidTotal > billTotal) {
+      return NextResponse.json(
+        { error: "actualPaidTotal cannot exceed the original bill total" },
+        { status: 400 }
+      );
+    }
+    updates.actualPaidTotal = String(body.actualPaidTotal);
+  } else if (typeof body.actualPaidTotal === "string" && body.actualPaidTotal === "") {
+    updates.actualPaidTotal = null;
+  }
+
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
   }

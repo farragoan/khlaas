@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { nanoid } from "nanoid";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { SignInButton, useUser } from "@clerk/nextjs";
+import { useUser, useClerk } from "@clerk/nextjs";
 import type { Session } from "@/hooks/use-session";
 
 interface ParticipantJoinProps {
@@ -14,11 +14,13 @@ interface ParticipantJoinProps {
 
 export function ParticipantJoin({ tableId, onJoined }: ParticipantJoinProps) {
   const { user, isSignedIn } = useUser();
+  const { openSignIn } = useClerk();
   const [name, setName] = useState(() =>
     isSignedIn ? (user?.fullName ?? user?.firstName ?? "") : ""
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showGuestForm, setShowGuestForm] = useState(false);
 
   useEffect(() => {
     if (isSignedIn) {
@@ -33,8 +35,12 @@ export function ParticipantJoin({ tableId, onJoined }: ParticipantJoinProps) {
     }
   }, [isSignedIn]);
 
+  const displayName = isSignedIn
+    ? (user?.fullName ?? user?.firstName ?? "")
+    : name;
+
   async function handleJoin() {
-    const trimmed = name.trim();
+    const trimmed = displayName.trim();
     if (!trimmed) return;
 
     setLoading(true);
@@ -67,6 +73,69 @@ export function ParticipantJoin({ tableId, onJoined }: ParticipantJoinProps) {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (isSignedIn) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <motion.div
+          initial={{ y: 40, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ type: "spring", damping: 20 }}
+          className="w-full max-w-sm bg-[var(--surface)] rounded-2xl p-6 space-y-5"
+        >
+          <div>
+            <h2 className="text-xl font-semibold text-white">Join the table</h2>
+            <p className="text-sm text-zinc-400 mt-1">
+              Joining as {displayName}
+            </p>
+          </div>
+
+          {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
+
+          <Button
+            onClick={handleJoin}
+            disabled={loading}
+            className="w-full h-12 bg-[var(--brand)] hover:bg-amber-300 text-black font-semibold rounded-xl"
+          >
+            {loading ? "Joining…" : `Join as ${displayName}`}
+          </Button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (!showGuestForm) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <motion.div
+          initial={{ y: 40, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ type: "spring", damping: 20 }}
+          className="w-full max-w-sm bg-[var(--surface)] rounded-2xl p-6 space-y-5"
+        >
+          <div>
+            <h2 className="text-xl font-semibold text-white">Join the table</h2>
+            <p className="text-sm text-zinc-400 mt-1">Choose how to join</p>
+          </div>
+
+          <Button
+            onClick={() => openSignIn()}
+            className="w-full h-12 bg-[var(--brand)] hover:bg-amber-300 text-black font-semibold rounded-xl"
+          >
+            Sign in with Google
+          </Button>
+
+          <Button
+            onClick={() => setShowGuestForm(true)}
+            variant="outline"
+            className="w-full h-12 bg-transparent border-zinc-700 text-zinc-300 hover:bg-zinc-800 font-semibold rounded-xl"
+          >
+            Continue as guest
+          </Button>
+        </motion.div>
+      </div>
+    );
   }
 
   return (
@@ -103,15 +172,14 @@ export function ParticipantJoin({ tableId, onJoined }: ParticipantJoinProps) {
           {loading ? "Joining…" : "Join table"}
         </Button>
 
-        {!isSignedIn && (
-          <div className="text-center">
-            <SignInButton mode="modal">
-              <button className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors underline underline-offset-2">
-                Sign in instead to save your bill history
-              </button>
-            </SignInButton>
-          </div>
-        )}
+        <div className="text-center">
+          <button
+            onClick={() => setShowGuestForm(false)}
+            className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors underline underline-offset-2"
+          >
+            Sign in instead to save your bill history
+          </button>
+        </div>
       </motion.div>
     </div>
   );

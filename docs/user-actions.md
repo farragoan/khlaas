@@ -89,6 +89,12 @@ To provision: create a free Upstash account at https://upstash.com, create a Red
 
 ---
 
+## 5. Confirm Google OAuth is enabled in Clerk (VERIFY)
+
+The join flow's "Sign in with Google" button calls Clerk's generic `openSignIn()` — it will show whichever social providers are enabled in the Clerk Dashboard (User & Authentication → Social Connections), not necessarily Google specifically. If Google isn't enabled there, the button's label won't match what the modal actually offers. Enable it (or relabel the button to match whatever's configured) before this ships to real users.
+
+---
+
 ## Decisions Made Autonomously
 
 These were ambiguous in the PRDs — decisions recorded here for visibility.

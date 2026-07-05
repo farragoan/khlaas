@@ -143,4 +143,163 @@ describe("computeLedger", () => {
     expect(result[0].toParticipant).toBe("alice");
     expect(result[0].amount).toBeCloseTo(20, 2);
   });
+
+  describe("discount (actualPaidTotal)", () => {
+    it("no discount when actualPaidTotal is null — identical to base case", () => {
+      const resultNoDiscount = computeLedger(
+        [item("i1", "100.00"), item("i2", "200.00")],
+        [p("alice"), p("bob")],
+        [sel("alice", "i1"), sel("bob", "i2")],
+        [pay("alice", 300)],
+        0,
+        null
+      );
+      const resultUndefined = computeLedger(
+        [item("i1", "100.00"), item("i2", "200.00")],
+        [p("alice"), p("bob")],
+        [sel("alice", "i1"), sel("bob", "i2")],
+        [pay("alice", 300)],
+        0
+      );
+      expect(resultNoDiscount).toEqual(resultUndefined);
+    });
+
+    it("10% discount — every participant's share reduced by 10%", () => {
+      // bill total = 300, actual paid = 270 (10% off)
+      // alice ate 100, bob ate 200. alice paid 270 (full discounted bill), bob paid 0.
+      // without discount: alice owes 100, bob owes 200. bob pays alice 200.
+      // with discount (ratio=0.9): alice owes 90, bob owes 180.
+      // net: alice = 90-270 = -180, bob = 180-0 = 180. bob pays alice 180.
+      const result = computeLedger(
+        [item("i1", "100.00"), item("i2", "200.00")],
+        [p("alice"), p("bob")],
+        [sel("alice", "i1"), sel("bob", "i2")],
+        [pay("alice", 270)],
+        0,
+        270
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0].fromParticipant).toBe("bob");
+      expect(result[0].toParticipant).toBe("alice");
+      expect(result[0].amount).toBeCloseTo(180, 2);
+    });
+
+    it("50% discount — halves everyone's share", () => {
+      // bill = 1000, actual paid = 500. alice ate 400, bob ate 600.
+      // alice paid 500, bob paid 0.
+      // discounted: alice owes 200, bob owes 300.
+      // net: alice = 200-500 = -300, bob = 300. bob pays alice 300.
+      const result = computeLedger(
+        [item("i1", "400.00"), item("i2", "600.00")],
+        [p("alice"), p("bob")],
+        [sel("alice", "i1"), sel("bob", "i2")],
+        [pay("alice", 500)],
+        0,
+        500
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0].fromParticipant).toBe("bob");
+      expect(result[0].toParticipant).toBe("alice");
+      expect(result[0].amount).toBeCloseTo(300, 2);
+    });
+
+    it("discount with fees — fees scaled proportionally too", () => {
+      // bill = 300 (food) + 30 (tax fee) = 330 total. actual paid = 297 (10% off).
+      // alice ate 100, bob ate 200. tax = 30.
+      // without discount: alice owes 110, bob owes 220. alice paid 330. bob pays alice 220.
+      // with discount (ratio=297/330=0.9): alice owes 99, bob owes 198.
+      // net: alice = 99-297 = -198, bob = 198. bob pays alice 198.
+      const result = computeLedger(
+        [item("i1", "100.00"), item("i2", "200.00"), item("tax", "30.00", true)],
+        [p("alice"), p("bob")],
+        [sel("alice", "i1"), sel("bob", "i2")],
+        [pay("alice", 297)],
+        0,
+        297
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0].fromParticipant).toBe("bob");
+      expect(result[0].toParticipant).toBe("alice");
+      expect(result[0].amount).toBeCloseTo(198, 2);
+    });
+
+    it("discount with tip — tip is NOT scaled by discount", () => {
+      // bill = 300, actual paid = 270 (10% off). tip = 60.
+      // alice ate 100, bob ate 200. alice paid 330 (270 + 60 tip).
+      // discounted food+fees: alice owes 90, bob owes 180. tip: alice=20, bob=40.
+      // total: alice=110, bob=220.
+      // net: alice = 110-330 = -220, bob = 220. bob pays alice 220.
+      const result = computeLedger(
+        [item("i1", "100.00"), item("i2", "200.00")],
+        [p("alice"), p("bob")],
+        [sel("alice", "i1"), sel("bob", "i2")],
+        [pay("alice", 330)],
+        60,
+        270
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0].fromParticipant).toBe("bob");
+      expect(result[0].toParticipant).toBe("alice");
+      expect(result[0].amount).toBeCloseTo(220, 2);
+    });
+
+    it("discount with split payments — both paid some amount", () => {
+      // bill = 1000, actual paid = 900 (10% off). alice ate 400, bob ate 600.
+      // alice paid 600, bob paid 300. total paid = 900. ✓
+      // discounted: alice owes 360, bob owes 540.
+      // net: alice = 360-600 = -240, bob = 540-300 = 240.
+      // bob pays alice 240.
+      const result = computeLedger(
+        [item("i1", "400.00"), item("i2", "600.00")],
+        [p("alice"), p("bob")],
+        [sel("alice", "i1"), sel("bob", "i2")],
+        [pay("alice", 600), pay("bob", 300)],
+        0,
+        900
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0].fromParticipant).toBe("bob");
+      expect(result[0].toParticipant).toBe("alice");
+      expect(result[0].amount).toBeCloseTo(240, 2);
+    });
+
+    it("discount equal to bill total — no effect (ratio=1)", () => {
+      // bill = 300, actual paid = 300. Same as no discount.
+      const result = computeLedger(
+        [item("i1", "100.00"), item("i2", "200.00")],
+        [p("alice"), p("bob")],
+        [sel("alice", "i1"), sel("bob", "i2")],
+        [pay("alice", 300)],
+        0,
+        300
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0].fromParticipant).toBe("bob");
+      expect(result[0].toParticipant).toBe("alice");
+      expect(result[0].amount).toBeCloseTo(200, 2);
+    });
+
+    it("three participants with discount — correct proportional reduction", () => {
+      // bill = 600. alice=100, bob=200, carol=300. actual paid = 540 (10% off).
+      // alice paid 540, others paid 0.
+      // discounted: alice owes 90, bob owes 180, carol owes 270.
+      // net: alice=90-540=-450, bob=180, carol=270.
+      // bob pays alice 180, carol pays alice 270.
+      const result = computeLedger(
+        [item("i1", "100.00"), item("i2", "200.00"), item("i3", "300.00")],
+        [p("alice"), p("bob"), p("carol")],
+        [sel("alice", "i1"), sel("bob", "i2"), sel("carol", "i3")],
+        [pay("alice", 540)],
+        0,
+        540
+      );
+      expect(result).toHaveLength(2);
+      const bobEntry = result.find((r) => r.fromParticipant === "bob");
+      const carolEntry = result.find((r) => r.fromParticipant === "carol");
+      expect(bobEntry?.toParticipant).toBe("alice");
+      expect(bobEntry?.amount).toBeCloseTo(180, 2);
+      expect(carolEntry?.toParticipant).toBe("alice");
+      expect(carolEntry?.amount).toBeCloseTo(270, 2);
+    });
+  });
 });

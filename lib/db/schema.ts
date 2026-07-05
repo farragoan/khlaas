@@ -29,6 +29,7 @@ export const splitTables = pgTable(
     currency: text("currency").notNull().default("INR"),
     createdBy: text("created_by"), // Clerk userId of the table creator
     paymentMode: text("payment_mode").$type<"host" | "split">(),
+    actualPaidTotal: numeric("actual_paid_total", { precision: 10, scale: 2 }),
   },
   (t) => [
     uniqueIndex("idx_split_tables_share_code").on(t.shareCode),
