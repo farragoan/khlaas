@@ -103,7 +103,9 @@ export async function POST(req: Request) {
     amount: parseFloat(p.amount),
   }));
 
-  const results = computeLedger(ledgerItems, ledgerParticipants, tableSelections, ledgerPayments, tip);
+  const actualPaidTotal = table.actualPaidTotal ? parseFloat(table.actualPaidTotal) : null;
+
+  const results = computeLedger(ledgerItems, ledgerParticipants, tableSelections, ledgerPayments, tip, actualPaidTotal);
 
   // Save tip and mark table settled
   await db

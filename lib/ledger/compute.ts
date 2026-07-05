@@ -5,7 +5,8 @@ export function computeLedger(
   participants: LedgerParticipant[],
   selections: LedgerSelection[],
   payments: LedgerPayment[],
-  tip: number
+  tip: number,
+  actualPaidTotal?: number | null
 ): LedgerResult[] {
   const n = participants.length;
   if (n === 0) return [];
@@ -41,6 +42,18 @@ export function computeLedger(
     for (const pid of Object.keys(owes)) {
       const proportion = grandFoodSubtotal > 0 ? foodSubtotal[pid] / grandFoodSubtotal : 1 / n;
       owes[pid] += totalFees * proportion;
+    }
+  }
+
+  // Step 2b: apply discount ratio (benefits whole table) to food + fees only
+  if (actualPaidTotal != null && actualPaidTotal >= 0) {
+    const totalBill = grandFoodSubtotal + totalFees;
+    if (totalBill > 0) {
+      const discountRatio = actualPaidTotal / totalBill;
+      for (const pid of Object.keys(owes)) {
+        // Scale the food+fees portion (currently in owes), preserving tip (not yet added)
+        owes[pid] *= discountRatio;
+      }
     }
   }
 
