@@ -342,7 +342,7 @@ export default function SettlePage({
 
   const { table, participants, ledger, payments, items, selections } = data;
   const tip = parseFloat(table.tip ?? "0");
-  const isHost = participants[0]?.id === session?.participantId;
+  const isHost = data.isHost;
 
   // Show UPI prompt if current user is owed money but has no UPI ID
   const myParticipant = participants.find((p) => p.id === session?.participantId);

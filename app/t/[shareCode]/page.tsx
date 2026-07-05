@@ -3,7 +3,7 @@
 import { use, useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Share2, Loader2, Users, Pencil, Check, Clock, ChevronDown } from "lucide-react";
+import { Share2, Loader2, Users, Pencil, Check, Clock, ChevronDown, X } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "@clerk/nextjs";
 import { nanoid } from "nanoid";
@@ -278,7 +278,9 @@ export default function TablePage({
   const { isSignedIn, user } = useUser();
   const [localSelections, setLocalSelections] = useState<Selection[] | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
+  const [showShareOverlay, setShowShareOverlay] = useState(false);
   const [editingParticipantId, setEditingParticipantId] = useState<string | undefined>(undefined);
+  const [showParticipantsList, setShowParticipantsList] = useState(false);
   const prevStatusRef = useRef<string | null>(null);
   const autoJoiningRef = useRef(false);
 
@@ -290,6 +292,7 @@ export default function TablePage({
   const [hostUpiId, setHostUpiId] = useState("");
   const [currency, setCurrency] = useState("INR");
   const [hostName, setHostName] = useState("");
+  const [splitsSubmitted, setSplitsSubmitted] = useState(false);
 
   const hostTip = wantTip ? parseLocalizedNumber(tipInput || "0") : 0;
 
@@ -406,7 +409,7 @@ export default function TablePage({
 
   const { table, items, participants, selections } = data;
   const activeSelections = localSelections ?? selections;
-  const isHost = !!session && participants[0]?.id === session.participantId;
+  const isHost = data.isHost;
   // Phase 6: Host always sees edit mode when items are ready
   const isEditing = table.status === "editing" || (isHost && table.status === "items_ready");
 
@@ -427,17 +430,20 @@ export default function TablePage({
   const canSettle = unselectedItems.length === 0 && missingPayments.length === 0 && hasAnyPayment;
 
   function handleShare() {
-    const url = `${window.location.origin}/t/${shareCode}`;
-    if (navigator.share) {
-      navigator.share({ title: "Split this bill on खल्लास", url });
-    } else {
-      navigator.clipboard.writeText(url);
-      toast.success("Link copied!");
-    }
+    if (phase === "share") return; // inline share step is already showing this UI
+    setShowShareOverlay(true);
   }
 
   async function handleSettleClick() {
-    if (!session || !canSettle) return;
+    if (!session) return;
+    if (!canSettle) {
+      const reasons: string[] = [];
+      if (unselectedItems.length > 0) reasons.push(`Unassigned items: ${unselectedItems.map((i) => i.name).join(", ")}`);
+      if (missingPayments.length > 0) reasons.push(`Missing payments from: ${missingPayments.map((p) => p.displayName).join(", ")}`);
+      if (!hasAnyPayment && missingPayments.length === 0) reasons.push("At least one person must have paid");
+      toast.error(reasons.length > 0 ? reasons.join(". ") : "This bill is incomplete");
+      return;
+    }
 
     // Save UPI ID to user profile if provided
     if (hostUpiId.trim()) {
@@ -546,28 +552,74 @@ export default function TablePage({
 
       {/* Participants strip */}
       {participants.length > 0 && (
-        <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-1">
-          <Users size={14} className="text-zinc-500 flex-shrink-0" />
-          <div className="flex gap-2">
-            {participants.map((p) => (
-              <motion.div
-                key={p.id}
-                initial={{ x: 20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ type: "spring", damping: 18 }}
-                className={`flex-shrink-0 flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${
-                  p.id === session?.participantId
-                    ? "bg-[var(--brand)] text-black"
-                    : "bg-[var(--surface-raised)] text-zinc-300"
-                }`}
-              >
-                {isEditing && <Pencil size={10} />}
-                {p.displayName}
-              </motion.div>
-            ))}
-          </div>
-        </div>
+        <button
+          onClick={() => setShowParticipantsList(true)}
+          className="flex items-center gap-2 mb-5 px-3 py-1.5 rounded-full bg-[var(--surface-raised)] text-zinc-300 text-xs font-medium w-fit active:scale-95 transition-transform"
+        >
+          <Users size={14} className="text-zinc-500" />
+          {participants.length === 1
+            ? "1 person in this bill"
+            : `${participants.length} people in this bill`}
+        </button>
       )}
+
+      {/* Participants list sheet */}
+      <AnimatePresence>
+        {showParticipantsList && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 z-50 flex items-end justify-center"
+            onClick={() => setShowParticipantsList(false)}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg bg-[#1A1A1A] rounded-t-2xl px-4 pt-5 pb-10"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-white font-semibold">Participants</h2>
+                <button
+                  onClick={() => setShowParticipantsList(false)}
+                  className="text-zinc-500 hover:text-zinc-300 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="space-y-2">
+                {participants.map((p) => (
+                  <div
+                    key={p.id}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl ${
+                      p.id === session?.participantId
+                        ? "bg-[var(--brand)] text-black font-medium"
+                        : "bg-[var(--surface)] text-zinc-200"
+                    }`}
+                  >
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                        p.id === session?.participantId
+                          ? "bg-black/20 text-black"
+                          : "bg-zinc-700 text-zinc-200"
+                      }`}
+                    >
+                      {p.displayName[0].toUpperCase()}
+                    </div>
+                    <span className="flex-1 text-sm">{p.displayName}</span>
+                    {isEditing && editingParticipantId === p.id && (
+                      <Pencil size={12} className={p.id === session?.participantId ? "text-black" : "text-zinc-400"} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main content */}
       <AnimatePresence mode="wait">
@@ -660,7 +712,10 @@ export default function TablePage({
             <ShareRoomSheet
               shareCode={shareCode}
               participants={participants}
-              onContinue={() => setPhase("items")}
+              onContinue={() => {
+                setPhase("items");
+                setShowShareOverlay(false);
+              }}
             />
           </motion.div>
         )}
@@ -703,6 +758,9 @@ export default function TablePage({
                       {p.displayName[0].toUpperCase()}
                     </div>
                     <span className="text-zinc-200 text-sm flex-1">{p.displayName}</span>
+                    {isHost && p.splitsSubmittedAt && (
+                      <Check size={14} className="text-emerald-400 flex-shrink-0" />
+                    )}
                     {canEdit ? (
                       <PaymentInput
                         participantId={p.id}
@@ -729,24 +787,9 @@ export default function TablePage({
       {showItems && phase === "items" && isHost && (
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0F0F0F]/90 backdrop-blur-sm border-t border-zinc-800">
           <div className="max-w-lg mx-auto">
-            {/* Validation errors */}
-            {!canSettle && (
-              <div className="text-red-400 text-xs space-y-1 mb-2 px-1">
-                {unselectedItems.length > 0 && (
-                  <p>Unassigned: {unselectedItems.map((i) => i.name).join(", ")}</p>
-                )}
-                {missingPayments.length > 0 && (
-                  <p>Missing payments: {missingPayments.map((p) => p.displayName).join(", ")}</p>
-                )}
-                {!hasAnyPayment && missingPayments.length === 0 && (
-                  <p>At least one person must have paid</p>
-                )}
-              </div>
-            )}
             <button
               onClick={handleSettleClick}
-              disabled={!canSettle}
-              className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-40"
+              className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all"
             >
               Settle up →
             </button>
@@ -754,13 +797,78 @@ export default function TablePage({
         </div>
       )}
 
-      {/* Non-host waiting message in edit mode */}
+      {/* Non-host submit splits / success state */}
       {showItems && !isHost && phase === "items" && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0F0F0F]/90 backdrop-blur-sm border-t border-zinc-800">
-          <div className="max-w-lg mx-auto">
-            <p className="text-center text-zinc-500 text-sm">
-              Waiting for {participants[0]?.displayName ?? "host"} to settle up…
-            </p>
+        <>
+          {splitsSubmitted || participants.find((p) => p.id === session?.participantId)?.splitsSubmittedAt ? (
+            <motion.div
+              key="submitted-success"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+              className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0F0F0F] px-6 text-center gap-4"
+            >
+              <motion.div
+                animate={{ scale: [1, 1.15, 1] }}
+                transition={{ duration: 0.5, ease: "easeInOut" }}
+                className="w-16 h-16 rounded-full bg-[var(--brand)]/20 flex items-center justify-center"
+              >
+                <Check size={32} className="text-[var(--brand)]" />
+              </motion.div>
+              <div className="space-y-1">
+                <h2 className="text-white font-semibold text-lg">You&apos;re all set!</h2>
+                <p className="text-zinc-400 text-sm">
+                  Your splits are in — go relax, we&apos;ll let everyone know when it&apos;s time to settle up.
+                </p>
+              </div>
+              <button
+                onClick={() => setSplitsSubmitted(false)}
+                className="mt-4 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                edit my splits
+              </button>
+            </motion.div>
+          ) : (
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0F0F0F]/90 backdrop-blur-sm border-t border-zinc-800">
+              <div className="max-w-lg mx-auto">
+                <button
+                  onClick={async () => {
+                    if (!session) return;
+                    try {
+                      const res = await fetch("/api/participants", {
+                        method: "PATCH",
+                        headers: {
+                          "Content-Type": "application/json",
+                          "x-session-token": session.sessionToken,
+                        },
+                        body: JSON.stringify({ submitted: true }),
+                      });
+                      if (!res.ok) throw new Error("Failed");
+                      setSplitsSubmitted(true);
+                      refresh();
+                    } catch {
+                      toast.error("Failed to submit splits, try again");
+                    }
+                  }}
+                  className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all"
+                >
+                  Submit splits
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Share overlay — triggered by header Share button */}
+      {showShareOverlay && phase !== "share" && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#0F0F0F] w-full max-w-lg rounded-t-3xl sm:rounded-2xl p-6 max-h-[85vh] overflow-y-auto">
+            <ShareRoomSheet
+              shareCode={shareCode}
+              participants={participants}
+              onContinue={() => setShowShareOverlay(false)}
+            />
           </div>
         </div>
       )}

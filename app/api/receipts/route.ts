@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { splitTables, items } from "@/lib/db/schema";
 import { ProcessReceiptSchema } from "@/lib/schemas";
-import { verifyHostSession } from "@/lib/auth";
+import { verifyHost } from "@/lib/auth";
+import { auth } from "@clerk/nextjs/server";
 import { eq } from "drizzle-orm";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -126,7 +127,8 @@ export async function POST(req: Request) {
   if (!table) return NextResponse.json({ error: "Table not found" }, { status: 404 });
   if (table.status !== "active") return NextResponse.json({ error: "Receipt already processed" }, { status: 409 });
 
-  const host = await verifyHostSession(tableId, sessionToken);
+  const { userId } = await auth();
+  const host = await verifyHost(tableId, { sessionToken, clerkUserId: userId });
   if (!host) return NextResponse.json({ error: "Only the host can scan a receipt" }, { status: 403 });
 
   let ocr: OcrResult;

@@ -46,9 +46,14 @@ export async function PATCH(req: Request) {
   }
 
   const body = await req.json();
-  const { displayName } = body as { displayName?: string };
-  if (!displayName || typeof displayName !== "string" || displayName.length < 1 || displayName.length > 50) {
+  const { displayName, submitted } = body as { displayName?: string; submitted?: boolean };
+
+  if (displayName !== undefined && (typeof displayName !== "string" || displayName.length < 1 || displayName.length > 50)) {
     return NextResponse.json({ error: "Invalid display name" }, { status: 400 });
+  }
+
+  if (displayName === undefined && !submitted) {
+    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
 
   const hashedToken = hashToken(sessionToken);
@@ -62,10 +67,24 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Invalid session" }, { status: 403 });
   }
 
-  await db
-    .update(participants)
-    .set({ displayName })
-    .where(eq(participants.id, participant.id));
+  const updates: Record<string, string | Date> = {};
+  if (displayName) updates.displayName = displayName;
+  if (submitted) updates.splitsSubmittedAt = new Date();
+
+  try {
+    await db
+      .update(participants)
+      .set(updates)
+      .where(eq(participants.id, participant.id));
+  } catch {
+    // splits_submitted_at column not yet migrated — update only displayName
+    if (displayName) {
+      await db
+        .update(participants)
+        .set({ displayName })
+        .where(eq(participants.id, participant.id));
+    }
+  }
 
   return NextResponse.json({ ok: true });
 }

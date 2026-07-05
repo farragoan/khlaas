@@ -74,6 +74,21 @@ Add `SENTRY_DSN` to Netlify env vars. This costs nothing under the free tier for
 
 ---
 
+## 4. Upstash Redis for Distributed Rate Limiting (RECOMMENDED)
+
+The API rate limiter uses Upstash Redis (`@upstash/ratelimit`) for production-grade distributed rate limiting. Without it, the middleware falls back to an in-memory sliding-window limiter that works per-instance only (not shared across serverless cold starts or multiple instances).
+
+Add to `.env.local`:
+
+```
+UPSTASH_REDIS_REST_URL=...
+UPSTASH_REDIS_REST_TOKEN=...
+```
+
+To provision: create a free Upstash account at https://upstash.com, create a Redis database, and copy the REST URL and token from the database console.
+
+---
+
 ## Decisions Made Autonomously
 
 These were ambiguous in the PRDs — decisions recorded here for visibility.
