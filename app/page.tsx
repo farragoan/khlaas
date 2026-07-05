@@ -5,6 +5,8 @@ import { Camera, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { SignInButton, UserButton, useAuth, useClerk } from "@clerk/nextjs";
 import { useState } from "react";
+import Link from "next/link";
+import { History } from "lucide-react";
 
 const LOCALE_CURRENCY: Record<string, string> = {
   "en-IN": "INR", "hi-IN": "INR", "hi": "INR",
@@ -57,9 +59,18 @@ export default function Home() {
   return (
     <main className="flex flex-col items-center justify-center min-h-dvh px-6 bg-[#0F0F0F]">
       {/* Auth bar */}
-      <div className="fixed top-4 right-4 z-10">
+      <div className="fixed top-4 right-4 z-10 flex items-center gap-2">
         {isSignedIn ? (
-          <UserButton appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
+          <>
+            <Link
+              href="/history"
+              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-600 flex items-center gap-1.5"
+            >
+              <History size={14} />
+              History
+            </Link>
+            <UserButton appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
+          </>
         ) : (
           <SignInButton mode="modal">
             <button className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-600">

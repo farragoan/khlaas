@@ -33,6 +33,8 @@ export const splitTables = pgTable(
   },
   (t) => [
     uniqueIndex("idx_split_tables_share_code").on(t.shareCode),
+    // Run `drizzle-kit generate && drizzle-kit migrate` in production to apply this index
+    index("idx_split_tables_created_by").on(t.createdBy),
     check(
       "status_check",
       sql`${t.status} IN ('active', 'items_ready', 'editing', 'settled', 'expired')`
