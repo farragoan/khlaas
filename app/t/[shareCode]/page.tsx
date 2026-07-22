@@ -883,10 +883,20 @@ export default function TablePage({
           <div className="max-w-lg mx-auto">
             <button
               onClick={handleSettleClick}
-              className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all"
+              disabled={!canSettle}
+              className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Settle up →
             </button>
+            {!canSettle && (
+              <p className="text-xs text-zinc-500 text-center mt-2">
+                {unselectedItems.length > 0
+                  ? "Select all items to settle"
+                  : missingPayments.length > 0
+                  ? "Fill in all payments to settle"
+                  : "At least one person must have paid"}
+              </p>
+            )}
           </div>
         </div>
       )}
