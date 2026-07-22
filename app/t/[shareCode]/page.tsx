@@ -255,7 +255,7 @@ function PaymentInput({
   }
 
   return (
-    <div className="flex items-center gap-1 bg-[var(--surface-raised)] rounded-xl px-3 py-2">
+    <div className="flex items-center gap-1 bg-[var(--surface-raised)] rounded-xl px-3 py-3">
       <span className="text-zinc-400 text-sm">{currencySymbol}</span>
       <input
         type="text"
@@ -263,7 +263,7 @@ function PaymentInput({
         placeholder="0"
         value={value}
         onChange={(e) => handleChange(e.target.value)}
-        className="w-20 bg-transparent text-zinc-100 text-sm text-right outline-none"
+        className="w-24 bg-transparent text-zinc-100 text-sm text-right outline-none"
       />
     </div>
   );
@@ -792,13 +792,13 @@ export default function TablePage({
                       }}
                       role="switch"
                       aria-checked={useDiscount}
-                      className={`relative w-10 h-5 rounded-full transition-colors ${
+                      className={`relative w-12 h-7 rounded-full transition-colors ${
                         useDiscount ? "bg-[var(--brand)]" : "bg-zinc-700"
                       }`}
                     >
                       <span
-                        className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                          useDiscount ? "translate-x-5" : ""
+                        className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${
+                          useDiscount ? "translate-x-6" : ""
                         }`}
                       />
                     </button>
