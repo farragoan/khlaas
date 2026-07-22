@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Camera, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ScanningLoader } from "@/components/scanning-loader";
 import { toast } from "sonner";
 
 interface ReceiptUploadProps {
@@ -176,9 +177,7 @@ export function ReceiptUpload({ tableId, sessionToken, onProcessed, onUploadStar
         </Button>
       </div>
       {uploading && (
-        <p className="text-sm text-zinc-400 text-center animate-pulse">
-          Reading your bill, this takes a few seconds…
-        </p>
+        <ScanningLoader messages={["Reading your receipt…", "Finding the items…", "Matching up the prices…", "Almost there…"]} />
       )}
     </div>
   );

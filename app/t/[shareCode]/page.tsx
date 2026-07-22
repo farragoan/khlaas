@@ -206,10 +206,13 @@ function HostProcessingPanel({
       <button
         onClick={onContinue}
         disabled={!canContinue}
-        className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-40"
+        className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
       >
         Continue
       </button>
+      {!canContinue && (
+        <p className="text-xs text-zinc-500 text-center">Choose who&apos;s paying to continue</p>
+      )}
     </motion.div>
   );
 }
@@ -760,6 +763,18 @@ export default function TablePage({
                 setShowShareOverlay(false);
               }}
             />
+          </motion.div>
+        )}
+
+        {/* Host waiting for items after share sheet */}
+        {phase === "items" && !showItems && isHost && (
+          <motion.div
+            key="host-waiting"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="pt-4"
+          >
+            <ProcessingState />
           </motion.div>
         )}
 
