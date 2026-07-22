@@ -112,12 +112,6 @@ export function ShareRoomSheet({ shareCode, participants, onContinue }: ShareRoo
               <span className="text-zinc-400 text-[10px] max-w-[48px] truncate">{p.displayName}</span>
             </motion.div>
           ))}
-          {/* Ghost dots for empty slots */}
-          {[...Array(Math.max(0, 3 - participants.length))].map((_, i) => (
-            <div key={`ghost-${i}`} className="w-9 h-9 rounded-full border-2 border-dashed border-zinc-700 flex items-center justify-center">
-              <div className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
-            </div>
-          ))}
         </div>
       </div>
 
