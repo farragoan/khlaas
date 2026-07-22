@@ -137,6 +137,8 @@ function HostProcessingPanel({
               <button
                 key={mode}
                 onClick={() => onPaymentModeChange(mode)}
+                role="radio"
+                aria-checked={selected}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-sm font-medium text-left ${
                   selected
                     ? "border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--brand)]"
@@ -788,6 +790,8 @@ export default function TablePage({
                           }).catch(() => {});
                         }
                       }}
+                      role="switch"
+                      aria-checked={useDiscount}
                       className={`relative w-10 h-5 rounded-full transition-colors ${
                         useDiscount ? "bg-[var(--brand)]" : "bg-zinc-700"
                       }`}

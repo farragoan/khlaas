@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { Minus, Plus } from "lucide-react";
 import { Price } from "@/components/price";
+import { useCurrency, getCurrencySymbol } from "@/lib/currency-context";
 import type { Item } from "@/lib/db/schema";
 import type { PublicParticipant } from "@/hooks/use-table-data";
 
@@ -28,12 +29,15 @@ export function ItemRow({
   onQuantityChange,
 }: ItemRowProps) {
   const showStepper = isSelected && item.quantity > 1 && onQuantityChange;
+  const currency = useCurrency();
+  const itemPrice = parseFloat(item.totalPrice ?? item.unitPrice ?? "0");
 
   return (
     <motion.button
       whileTap={{ scale: 0.98 }}
       onClick={isFee ? undefined : showStepper ? undefined : onToggle}
       disabled={isFee}
+      aria-label={`${item.name}, ${getCurrencySymbol(currency)}${itemPrice.toFixed(2)}. ${isSelected ? "Selected" : "Not selected"}`}
       className={`
         w-full flex items-center gap-3 px-4 rounded-xl transition-colors duration-150
         min-h-[56px]
@@ -115,6 +119,7 @@ export function ItemRow({
             <div
               key={p.id}
               title={p.displayName}
+              aria-label={p.displayName}
               className="w-6 h-6 rounded-full bg-zinc-600 border border-[var(--surface)] flex items-center justify-center text-[10px] font-bold text-zinc-200 flex-shrink-0"
             >
               {p.displayName[0].toUpperCase()}
