@@ -1,6 +1,8 @@
-Use MIMO, using your inbuilt memory on MIMO Code Auto Provider to execute the plan. Plot code will only be used to figure out what we need to do and draft a plan that can be then supplied to MIMO Code. Every work needs to be done by forking the main branch and then pushing it by merging it to MIMO. # khlaas — Product Roadmap
+# khlaas — Product Roadmap
 
-_Last updated: 2026-06-28_
+_Last updated: 2026-07-22_
+
+Package manager: pnpm (switched back from npm on 2026-07-22 — see commit history for why).
 
 ---
 
@@ -29,13 +31,13 @@ Sliding-window per-IP limits in `middleware.ts`: `/api/receipts` 3/min, `/api/pa
 - [x] `lib/rate-limit.ts` — uses real Upstash Redis when `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` are set, falls back to an in-memory sliding window otherwise (per-instance only, documented limitation)
 - [ ] Provision Upstash (free tier) and add env vars to Netlify — **user action**, see `docs/user-actions.md` §4
 
-### Session Token Hashing _(P1)_
+### Session Token Hashing _(P1 — hashing shipped, cosmetic rename remaining)_
 **PRD:** `docs/PRDs/security-session-hardening.md`
 
-Store `SHA-256(token)` in DB instead of raw token. DB leak no longer exposes usable credentials.
-- [ ] Add `session_token_hash` column, drop `session_token`
-- [ ] Update `lib/auth.ts`, `app/api/participants/route.ts`, all auth checks
-- [ ] `npx drizzle-kit push`
+SHA-256 hashing is already implemented in `lib/auth.ts` (`createHash("sha256")` before storage/compare). DB leak no longer exposes usable credentials.
+- [x] `lib/auth.ts`: `hashToken()` hashes with SHA-256 before storage/compare
+- [x] All auth checks use hashed tokens
+- [ ] (cosmetic, low-priority) Rename `session_token` column → `session_token_hash` for clarity; requires drizzle migration
 
 ### Infrastructure Hardening _(user actions — see `docs/user-actions.md`)_
 - [ ] Cloudflare WAF + rate limiting in front of Netlify
@@ -44,7 +46,7 @@ Store `SHA-256(token)` in DB instead of raw token. DB leak no longer exposes usa
 - [ ] Sentry error monitoring before public launch
 
 ### Other Audit Findings _(2026-07-04, static code review — no live DB access used)_
-- Session token hashing (line above, "P1") appears to already be shipped in code — `lib/auth.ts` hashes with SHA-256 before storage/compare — but the roadmap doesn't reflect it. Needs a quick verification pass, not a rewrite.
+- Session token hashing — confirmed shipped in `lib/auth.ts` (SHA-256 before storage/compare); roadmap updated 2026-07-22.
 - `items.rawOcr` (text column, comment says "JSONB stored as text for simplicity") has no size cap and could carry incidental PII if OCR picks up more than the itemized receipt (e.g. stray card digits). Worth capping + reviewing what the OCR prompt actually extracts.
 - A previously-attempted Neon MCP server (`~/.claude.json`, `@neondatabase/mcp-server-neon`) that would have given an AI agent direct live DB access is currently broken (dependency error) and was left disabled on purpose — do not re-enable without an explicit decision on PII exposure.
 
@@ -114,10 +116,7 @@ _Shipped: 2026-06-24_
 
 ## V2 (Post-Auth)
 
-### Bill History _(partial — verified 2026-07-04, highest priority remaining item)_
-Backend-only so far, in the untouched worktree `.claude/worktrees/feat+bill-history` (branch `worktree-feat+bill-history`, not merged): `GET /api/history` (paginated, cursor-based, 4-way parallel enrichment) and a new `idx_split_tables_created_by` index on `splitTables` in `lib/db/schema.ts`. Missing before this can ship:
-- [ ] Generate the drizzle migration for `idx_split_tables_created_by` (nothing past `drizzle/0005_add_payment_mode.sql` exists yet — this index was never migrated)
-- [ ] `/history` page listing all tables the user participated in (no frontend exists at all yet)
+### Cross-bill Balance
 - [ ] Cross-bill balance with a friend ("you owe Arjun ₹X across 3 bills")
 
 ### Groups
@@ -128,6 +127,11 @@ Backend-only so far, in the untouched worktree `.claude/worktrees/feat+bill-hist
 ---
 
 ## Shipped
+
+### Bill History ✓
+_Shipped: 2026-07-22_ · PR #11 (`6411566`) + PR #12 (`167dfbd`)
+
+`GET /api/history` (paginated, cursor-based, 4-way parallel enrichment), `/history` page, `idx_split_tables_created_by` index on `splitTables`. Migration registered and applied.
 
 ### Table Page UX Fixes ✓
 _Shipped: 2026-07-04_
