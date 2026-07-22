@@ -27,6 +27,7 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, sans-serif;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 * {

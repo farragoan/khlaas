@@ -137,6 +137,8 @@ function HostProcessingPanel({
               <button
                 key={mode}
                 onClick={() => onPaymentModeChange(mode)}
+                role="radio"
+                aria-checked={selected}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-sm font-medium text-left ${
                   selected
                     ? "border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--brand)]"
@@ -253,7 +255,7 @@ function PaymentInput({
   }
 
   return (
-    <div className="flex items-center gap-1 bg-[var(--surface-raised)] rounded-xl px-3 py-2">
+    <div className="flex items-center gap-1 bg-[var(--surface-raised)] rounded-xl px-3 py-3">
       <span className="text-zinc-400 text-sm">{currencySymbol}</span>
       <input
         type="text"
@@ -261,7 +263,7 @@ function PaymentInput({
         placeholder="0"
         value={value}
         onChange={(e) => handleChange(e.target.value)}
-        className="w-20 bg-transparent text-zinc-100 text-sm text-right outline-none"
+        className="w-24 bg-transparent text-zinc-100 text-sm text-right outline-none"
       />
     </div>
   );
@@ -408,8 +410,22 @@ export default function TablePage({
 
   if (error || !data) {
     return (
-      <div className="flex items-center justify-center min-h-dvh bg-[#0F0F0F]">
+      <div className="flex flex-col items-center justify-center min-h-dvh bg-[#0F0F0F] px-6 text-center gap-4">
         <p className="text-zinc-400">Table not found</p>
+        <div className="flex gap-3">
+          <button
+            onClick={() => refresh()}
+            className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+          >
+            Try again
+          </button>
+          <a
+            href="/"
+            className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+          >
+            Go home
+          </a>
+        </div>
       </div>
     );
   }
@@ -556,7 +572,7 @@ export default function TablePage({
 
   return (
     <CurrencyProvider value={currency}>
-    <main className="min-h-dvh bg-[#0F0F0F] flex flex-col max-w-lg mx-auto px-4 pb-32">
+    <main className="min-h-dvh bg-[#0F0F0F] flex flex-col max-w-lg mx-auto px-4" style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom, 0px))" }}>
       {/* Header */}
       <div className="flex items-center justify-between py-5">
         <h1 className="text-[var(--brand)] font-bold text-xl">खल्लास</h1>
@@ -604,7 +620,7 @@ export default function TablePage({
                 <h2 className="text-white font-semibold">Participants</h2>
                 <button
                   onClick={() => setShowParticipantsList(false)}
-                  className="text-zinc-500 hover:text-zinc-300 transition-colors"
+                  className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-500 hover:text-zinc-300 transition-colors"
                 >
                   <X size={20} />
                 </button>
@@ -692,6 +708,14 @@ export default function TablePage({
               Waiting for the host to scan the receipt…
             </p>
             <ProcessingState />
+            <div className="flex flex-col items-center gap-3 mt-6">
+              <a
+                href="/"
+                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                Go home
+              </a>
+            </div>
           </motion.div>
         )}
 
@@ -773,7 +797,7 @@ export default function TablePage({
               {isHost && (
                 <div className="bg-[var(--surface)] rounded-xl px-4 py-3">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm text-zinc-200">Paid via deal?</p>
+                    <p className="text-sm text-zinc-200">Paid a different total?</p>
                     <button
                       onClick={() => {
                         const next = !useDiscount;
@@ -788,13 +812,15 @@ export default function TablePage({
                           }).catch(() => {});
                         }
                       }}
-                      className={`relative w-10 h-5 rounded-full transition-colors ${
+                      role="switch"
+                      aria-checked={useDiscount}
+                      className={`relative w-12 h-7 rounded-full transition-colors ${
                         useDiscount ? "bg-[var(--brand)]" : "bg-zinc-700"
                       }`}
                     >
                       <span
-                        className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                          useDiscount ? "translate-x-5" : ""
+                        className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${
+                          useDiscount ? "translate-x-6" : ""
                         }`}
                       />
                     </button>
@@ -879,10 +905,20 @@ export default function TablePage({
           <div className="max-w-lg mx-auto">
             <button
               onClick={handleSettleClick}
-              className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all"
+              disabled={!canSettle}
+              className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Settle up →
             </button>
+            {!canSettle && (
+              <p className="text-xs text-zinc-500 text-center mt-2">
+                {unselectedItems.length > 0
+                  ? "Select all items to settle"
+                  : missingPayments.length > 0
+                  ? "Fill in all payments to settle"
+                  : "At least one person must have paid"}
+              </p>
+            )}
           </div>
         </div>
       )}

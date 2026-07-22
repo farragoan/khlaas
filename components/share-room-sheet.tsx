@@ -80,14 +80,14 @@ export function ShareRoomSheet({ shareCode, participants, onContinue }: ShareRoo
       <div className="flex gap-3 w-full mb-6">
         <button
           onClick={handleCopy}
-          className="flex-1 h-11 flex items-center justify-center gap-2 rounded-xl bg-[var(--surface)] text-zinc-300 text-sm font-medium hover:bg-zinc-700 active:scale-95 transition-all"
+          className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl bg-[var(--surface)] text-zinc-300 text-sm font-medium hover:bg-zinc-700 active:scale-95 transition-all"
         >
           {copied ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
           {copied ? "Copied!" : "Copy link"}
         </button>
         <button
           onClick={handleShare}
-          className="flex-1 h-11 flex items-center justify-center gap-2 rounded-xl bg-[var(--surface)] text-zinc-300 text-sm font-medium hover:bg-zinc-700 active:scale-95 transition-all"
+          className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl bg-[var(--surface)] text-zinc-300 text-sm font-medium hover:bg-zinc-700 active:scale-95 transition-all"
         >
           <Share2 size={16} />
           Share

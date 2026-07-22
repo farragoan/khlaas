@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import { getCurrencySymbol } from "@/lib/currency-context";
 
 interface UpiAppModalProps {
   isOpen: boolean;
@@ -103,7 +104,7 @@ export function UpiAppModal({
                   <div>
                     <span className="text-white font-medium">{app.name}</span>
                     <p className="text-xs text-zinc-500">
-                      Pay ₹{amount.toFixed(2)} to {name}
+                      Pay {getCurrencySymbol(currency)}{amount.toFixed(2)} to {name}
                     </p>
                   </div>
                 </button>

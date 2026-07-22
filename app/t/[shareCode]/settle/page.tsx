@@ -428,13 +428,15 @@ export default function SettlePage({
       <main className="min-h-dvh bg-[#0F0F0F] flex flex-col max-w-lg mx-auto px-4 pb-16">
         {/* Header */}
         <div className="flex items-center justify-between py-5">
-          <button
-            onClick={() => router.push(`/t/${shareCode}`)}
-            className="text-zinc-400 hover:text-zinc-200 transition-colors"
-          >
-            <ChevronLeft size={24} />
-          </button>
-          <h1 className="text-[var(--brand)] font-bold text-xl">खल्लास</h1>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push(`/t/${shareCode}`)}
+              className="text-zinc-400 hover:text-zinc-200 transition-colors"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <h1 className="text-[var(--brand)] font-bold text-xl">खल्लास</h1>
+          </div>
           <button
             onClick={handleShare}
             className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
