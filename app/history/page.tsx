@@ -127,7 +127,13 @@ export default function HistoryPage() {
       {/* Header */}
       <div className="flex items-center gap-3 py-5">
         <button
-          onClick={() => router.push("/")}
+          onClick={() => {
+            if (typeof window !== "undefined" && window.history.length > 1) {
+              router.back();
+            } else {
+              router.push("/");
+            }
+          }}
           className="text-zinc-400 hover:text-zinc-200 transition-colors"
         >
           <ArrowLeft size={20} />
