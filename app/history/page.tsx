@@ -188,7 +188,7 @@ export default function HistoryPage() {
               <Link
                 key={bill.shareCode}
                 href={`/t/${bill.shareCode}`}
-                className="block bg-[var(--surface)] rounded-2xl px-4 py-4 hover:bg-zinc-800/60 transition-colors"
+                className="block bg-[var(--surface)] rounded-2xl px-4 py-4 hover:bg-zinc-800/60 active:scale-[0.98] transition-transform transition-colors"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">

@@ -572,7 +572,7 @@ export default function TablePage({
 
   return (
     <CurrencyProvider value={currency}>
-    <main className="min-h-dvh bg-[#0F0F0F] flex flex-col max-w-lg mx-auto px-4 pb-32">
+    <main className="min-h-dvh bg-[#0F0F0F] flex flex-col max-w-lg mx-auto px-4" style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom, 0px))" }}>
       {/* Header */}
       <div className="flex items-center justify-between py-5">
         <h1 className="text-[var(--brand)] font-bold text-xl">खल्लास</h1>
@@ -620,7 +620,7 @@ export default function TablePage({
                 <h2 className="text-white font-semibold">Participants</h2>
                 <button
                   onClick={() => setShowParticipantsList(false)}
-                  className="text-zinc-500 hover:text-zinc-300 transition-colors"
+                  className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-500 hover:text-zinc-300 transition-colors"
                 >
                   <X size={20} />
                 </button>
@@ -708,6 +708,14 @@ export default function TablePage({
               Waiting for the host to scan the receipt…
             </p>
             <ProcessingState />
+            <div className="flex flex-col items-center gap-3 mt-6">
+              <a
+                href="/"
+                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                Go home
+              </a>
+            </div>
           </motion.div>
         )}
 
@@ -789,7 +797,7 @@ export default function TablePage({
               {isHost && (
                 <div className="bg-[var(--surface)] rounded-xl px-4 py-3">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm text-zinc-200">Paid via deal?</p>
+                    <p className="text-sm text-zinc-200">Paid a different total?</p>
                     <button
                       onClick={() => {
                         const next = !useDiscount;
