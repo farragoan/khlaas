@@ -410,8 +410,22 @@ export default function TablePage({
 
   if (error || !data) {
     return (
-      <div className="flex items-center justify-center min-h-dvh bg-[#0F0F0F]">
+      <div className="flex flex-col items-center justify-center min-h-dvh bg-[#0F0F0F] px-6 text-center gap-4">
         <p className="text-zinc-400">Table not found</p>
+        <div className="flex gap-3">
+          <button
+            onClick={() => refresh()}
+            className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+          >
+            Try again
+          </button>
+          <a
+            href="/"
+            className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+          >
+            Go home
+          </a>
+        </div>
       </div>
     );
   }
