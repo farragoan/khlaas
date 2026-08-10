@@ -14,6 +14,7 @@ _Prepared: April 2026 | Framework: McKinsey 7-S + Growth Strategy_
 | [04](./04-customer-acquisition.md) | Customer Acquisition Strategy | How to get and keep users |
 | [05](./05-roadmap-value-creation.md) | Roadmap & Value Creation | Which features unlock which revenue levers |
 | [06](./06-platform-design.md) | Platform Design Recommendations | Network effects, virality, and defensibility |
+| [07](./07-whatsapp-integration-research.md) | WhatsApp Integration: Market, Feasibility & Economics | Chat-native coordination, Apple Cash threat, unit economics (Aug 2026) |
 
 ---
 
