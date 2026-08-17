@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth, SignInButton, useClerk } from "@clerk/nextjs";
 import { Loader2, Clock, Check, Users, Camera, ArrowLeft } from "lucide-react";
 import { getCurrencySymbol } from "@/lib/currency-context";
+import { AUTH_MODAL_PROPS } from "@/lib/auth-ui";
 import type { HistoryBillEntry } from "@/app/api/history/route";
 
 const STATUS_CONFIG: Record<
@@ -113,9 +114,9 @@ export default function HistoryPage() {
           <h1 className="text-white font-semibold text-lg">Sign in to see your bill history</h1>
           <p className="text-zinc-500 text-sm">Your past bills appear here once you&apos;re signed in.</p>
         </div>
-        <SignInButton mode="modal">
+        <SignInButton mode="modal" {...AUTH_MODAL_PROPS}>
           <button className="px-6 py-3 bg-[var(--brand)] text-black font-semibold rounded-2xl text-sm">
-            Sign in
+            Continue with Google
           </button>
         </SignInButton>
       </div>

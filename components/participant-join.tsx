@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { nanoid } from "nanoid";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { useUser, useClerk } from "@clerk/nextjs";
+import { GoogleOneTap, useUser, useClerk } from "@clerk/nextjs";
+import { AUTH_MODAL_PROPS } from "@/lib/auth-ui";
 import type { Session } from "@/hooks/use-session";
 
 interface ParticipantJoinProps {
@@ -114,16 +115,20 @@ export function ParticipantJoin({ tableId, onJoined }: ParticipantJoinProps) {
           transition={{ type: "spring", damping: 20 }}
           className="w-full max-w-sm bg-[var(--surface)] rounded-2xl p-6 space-y-5"
         >
+          {/* Reached only when signed out, so One Tap always has work to do:
+              a returning user joins without leaving the share link. */}
+          <GoogleOneTap />
+
           <div>
             <h2 className="text-xl font-semibold text-white">Join the table</h2>
             <p className="text-sm text-zinc-400 mt-1">Choose how to join</p>
           </div>
 
           <Button
-            onClick={() => openSignIn()}
+            onClick={() => openSignIn(AUTH_MODAL_PROPS)}
             className="w-full h-12 bg-[var(--brand)] hover:bg-amber-300 text-black font-semibold rounded-xl"
           >
-            Sign in with Google
+            Continue with Google
           </Button>
 
           <Button

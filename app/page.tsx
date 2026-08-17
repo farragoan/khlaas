@@ -3,10 +3,11 @@
 import { useRouter } from "next/navigation";
 import { Camera, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { SignInButton, UserButton, useAuth, useClerk } from "@clerk/nextjs";
+import { GoogleOneTap, SignInButton, UserButton, useAuth, useClerk } from "@clerk/nextjs";
 import { useState } from "react";
 import Link from "next/link";
 import { History } from "lucide-react";
+import { AUTH_MODAL_PROPS } from "@/lib/auth-ui";
 
 const LOCALE_CURRENCY: Record<string, string> = {
   "en-IN": "INR", "hi-IN": "INR", "hi": "INR",
@@ -29,14 +30,14 @@ function detectCurrency(): string {
 
 export default function Home() {
   const router = useRouter();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, isLoaded } = useAuth();
   const { openSignIn } = useClerk();
   const [creating, setCreating] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
 
   async function handleStart() {
     if (!isSignedIn) {
-      openSignIn();
+      openSignIn(AUTH_MODAL_PROPS);
       return;
     }
     setCreating(true);
@@ -58,6 +59,10 @@ export default function Home() {
 
   return (
     <main className="flex flex-col items-center justify-center min-h-dvh px-6 bg-[#0F0F0F]">
+      {/* Google One Tap: prompts returning users straight into a session without
+          opening the modal. Renders nothing once a session exists. */}
+      {isLoaded && !isSignedIn && <GoogleOneTap />}
+
       {/* Auth bar */}
       <div className="fixed top-4 right-4 z-10 flex items-center gap-2">
         {isSignedIn ? (
@@ -72,9 +77,9 @@ export default function Home() {
             <UserButton appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
           </>
         ) : (
-          <SignInButton mode="modal">
+          <SignInButton mode="modal" {...AUTH_MODAL_PROPS}>
             <button className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-600">
-              Sign in
+              Continue
             </button>
           </SignInButton>
         )}
@@ -102,7 +107,7 @@ export default function Home() {
             ) : (
               <>
                 <Camera size={22} />
-                {isSignedIn ? "Scan a bill" : "Sign in to scan a bill"}
+                {isSignedIn ? "Scan a bill" : "Continue with Google"}
               </>
             )}
           </button>

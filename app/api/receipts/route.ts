@@ -7,8 +7,11 @@ import { auth } from "@clerk/nextjs/server";
 import { eq } from "drizzle-orm";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
+// flash-lite over flash: same vision quality on receipts, and thinking is off by
+// default here whereas gemini-2.5-flash reasons before every answer — a latency
+// tax we pay on each scan for no gain on a fixed extraction task.
 const GOOGLE_AI_API_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent";
 
 interface OcrItem {
   name: string;
@@ -25,15 +28,49 @@ interface OcrResult {
   total: number | null;
 }
 
-const OCR_PROMPT = `You are a receipt OCR assistant. Extract all line items from this receipt image.
+// The response shape is enforced by OCR_RESPONSE_SCHEMA below, so the prompt only
+// has to cover the judgement calls a schema can't express.
+const OCR_PROMPT = `Extract every line item from this receipt image.
 
-IMPORTANT: Your entire response must be a single valid JSON object with no other text, no markdown, no code fences, no explanation.
+If the image is not a receipt, bill, or invoice, set not_a_receipt to true and leave every other field empty. Otherwise set it to false.
 
-If the image is NOT a receipt, bill, or invoice, return exactly:
-{"not_a_receipt":true,"items":[],"tax":null,"service_charge":null,"other_fees":[],"total":null}
+Report unit_price as the price of a single unit, not the line total. Use null for any total, tax, or service charge that is not printed on the receipt.`;
 
-If it IS a receipt, return exactly this structure (use null for missing numeric fields, empty array for missing arrays):
-{"items":[{"name":"Item Name","quantity":1,"unit_price":9.99}],"tax":1.50,"service_charge":null,"other_fees":[{"name":"Delivery","amount":2.00}],"total":13.49}`;
+/**
+ * Gemini's OpenAPI-subset schema. Constraining the output does double duty: it
+ * guarantees parseable JSON, and it stops the model spending tokens on prose or
+ * code fences we would only throw away.
+ */
+const OCR_RESPONSE_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    not_a_receipt: { type: "BOOLEAN" },
+    items: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          name: { type: "STRING" },
+          quantity: { type: "NUMBER" },
+          unit_price: { type: "NUMBER" },
+        },
+        required: ["name", "quantity", "unit_price"],
+      },
+    },
+    tax: { type: "NUMBER", nullable: true },
+    service_charge: { type: "NUMBER", nullable: true },
+    other_fees: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: { name: { type: "STRING" }, amount: { type: "NUMBER" } },
+        required: ["name", "amount"],
+      },
+    },
+    total: { type: "NUMBER", nullable: true },
+  },
+  required: ["not_a_receipt", "items", "tax", "service_charge", "other_fees", "total"],
+} as const;
 
 function parseOcrJson(content: string): OcrResult {
   const stripped = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
@@ -42,7 +79,9 @@ function parseOcrJson(content: string): OcrResult {
   return JSON.parse(jsonMatch[0]) as OcrResult;
 }
 
-async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3, baseDelayMs = 500): Promise<T> {
+// Two quick retries, not three slow ones: the old 500ms base spent 3.5s asleep
+// before surfacing a failure, which read to users as a hang rather than an error.
+async function withRetry<T>(fn: () => Promise<T>, maxRetries = 2, baseDelayMs = 200): Promise<T> {
   let lastError: Error = new Error("Unknown error");
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -92,7 +131,10 @@ async function extractViaGoogleAI(imageBase64: string): Promise<OcrResult> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ parts: [{ text: OCR_PROMPT }, { inlineData: { mimeType: "image/jpeg", data: imageBase64 } }] }],
-        generationConfig: { responseMimeType: "application/json" },
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: OCR_RESPONSE_SCHEMA,
+        },
       }),
     });
 

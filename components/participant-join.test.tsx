@@ -6,6 +6,7 @@ import { ParticipantJoin } from "./participant-join";
 vi.mock("@clerk/nextjs", () => ({
   useUser: vi.fn(),
   useClerk: vi.fn(),
+  GoogleOneTap: () => <div data-testid="google-one-tap" />,
 }));
 
 import { useUser, useClerk } from "@clerk/nextjs";
@@ -79,16 +80,26 @@ describe("ParticipantJoin", () => {
       mockSignedOut();
       render(<ParticipantJoin tableId="t1" onJoined={mockOnJoined} />);
 
-      expect(screen.getByText("Sign in with Google")).toBeDefined();
+      expect(screen.getByText("Continue with Google")).toBeDefined();
       expect(screen.getByText("Continue as guest")).toBeDefined();
+      expect(screen.getByTestId("google-one-tap")).toBeDefined();
+    });
+
+    it("does not render One Tap once signed in", () => {
+      mockSignedIn();
+      render(<ParticipantJoin tableId="t1" onJoined={mockOnJoined} />);
+
+      expect(screen.queryByTestId("google-one-tap")).toBeNull();
     });
 
     it("opens sign-in modal when clicking sign-in button", () => {
       mockSignedOut();
       render(<ParticipantJoin tableId="t1" onJoined={mockOnJoined} />);
-      fireEvent.click(screen.getByText("Sign in with Google"));
+      fireEvent.click(screen.getByText("Continue with Google"));
 
-      expect(mockOpenSignIn).toHaveBeenCalled();
+      // withSignUp keeps new and returning users on one flow — without it,
+      // an unrecognised Google account dead-ends on external_account_not_found.
+      expect(mockOpenSignIn).toHaveBeenCalledWith({ withSignUp: true });
     });
 
     it("shows name form when clicking continue as guest", () => {
@@ -136,7 +147,7 @@ describe("ParticipantJoin", () => {
       );
       fireEvent.click(signInLink);
 
-      expect(screen.getByText("Sign in with Google")).toBeDefined();
+      expect(screen.getByText("Continue with Google")).toBeDefined();
       expect(screen.getByText("Continue as guest")).toBeDefined();
     });
   });
