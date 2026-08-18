@@ -4,7 +4,7 @@ import { db } from "@/lib/db/client";
 import { participants } from "@/lib/db/schema";
 import { JoinParticipantSchema } from "@/lib/schemas";
 import { hashToken } from "@/lib/auth";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -55,7 +55,11 @@ export async function PATCH(req: Request) {
   }
 
   const body = await req.json();
-  const { displayName, submitted } = body as { displayName?: string; submitted?: boolean };
+  const { displayName, submitted, tableId } = body as { displayName?: string; submitted?: boolean; tableId?: string };
+
+  if (!tableId || typeof tableId !== "string" || tableId.trim() === "") {
+    return NextResponse.json({ error: "Missing tableId" }, { status: 400 });
+  }
 
   if (displayName !== undefined && (typeof displayName !== "string" || displayName.length < 1 || displayName.length > 50)) {
     return NextResponse.json({ error: "Invalid display name" }, { status: 400 });
@@ -69,7 +73,14 @@ export async function PATCH(req: Request) {
   const [participant] = await db
     .select({ id: participants.id })
     .from(participants)
-    .where(eq(participants.sessionToken, hashedToken))
+    // A session token identifies one person at one table, so the lookup must
+    // be constrained to that table rather than searching every row globally.
+    .where(
+      and(
+        eq(participants.tableId, tableId),
+        eq(participants.sessionToken, hashedToken)
+      )
+    )
     .limit(1);
 
   if (!participant) {

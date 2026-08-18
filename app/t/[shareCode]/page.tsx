@@ -522,7 +522,7 @@ export default function TablePage({
         fetch("/api/participants", {
           method: "PATCH",
           headers: { "Content-Type": "application/json", "x-session-token": session.sessionToken },
-          body: JSON.stringify({ displayName: hostName.trim() }),
+          body: JSON.stringify({ displayName: hostName.trim(), tableId: table.id }),
         })
       );
     }
@@ -982,7 +982,7 @@ export default function TablePage({
                           "Content-Type": "application/json",
                           "x-session-token": session.sessionToken,
                         },
-                        body: JSON.stringify({ submitted: true }),
+                        body: JSON.stringify({ submitted: true, tableId: table.id }),
                       });
                       if (!res.ok) throw new Error("Failed");
                       setSplitsSubmitted(true);
