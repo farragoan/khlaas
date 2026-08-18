@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { toast } from "sonner";
 import { ItemRow } from "./item-row";
+import { ByPersonView } from "./by-person-view";
 import type { Item } from "@/lib/db/schema";
 import type { Selection, PublicParticipant } from "@/hooks/use-table-data";
 import type { Session } from "@/hooks/use-session";
@@ -35,6 +36,7 @@ export function ItemList({
 }: ItemListProps) {
   const [listRef] = useAutoAnimate<HTMLDivElement>();
   const [localSelections, setLocalSelections] = useState<Selection[]>(selections);
+  const [viewMode, setViewMode] = useState<"by-item" | "by-person">("by-item");
 
   // The participant whose selections we're viewing/editing
   const activeParticipantId = editingParticipantId ?? session.participantId;
@@ -228,43 +230,76 @@ export function ItemList({
         </p>
       )}
 
-      <div ref={listRef} className="space-y-2">
-        {regularItems.map((item) => {
-          const myQty = getMyQuantity(item.id);
-          const otherAllocated = getOtherAllocated(item.id);
-          const maxAvailable = item.quantity - otherAllocated;
-          return (
-            <ItemRow
-              key={item.id}
-              item={item}
-              selectors={selectorsFor(item.id)}
-              isSelected={isSelected(item.id)}
-              isFee={false}
-              onToggle={() => toggle(item)}
-              myQuantity={myQty}
-              maxQuantity={maxAvailable}
-              onQuantityChange={(qty) => updateQuantity(item, qty)}
-            />
-          );
-        })}
+      {/* View toggle */}
+      <div className="space-y-2">
+        <p className="text-xs text-zinc-500 uppercase tracking-wider px-1">View</p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setViewMode("by-item")}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              viewMode === "by-item"
+                ? "bg-[var(--brand)] text-black"
+                : "bg-[var(--surface-raised)] text-zinc-300 hover:bg-zinc-700"
+            }`}
+          >
+            By Item
+          </button>
+          <button
+            onClick={() => setViewMode("by-person")}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              viewMode === "by-person"
+                ? "bg-[var(--brand)] text-black"
+                : "bg-[var(--surface-raised)] text-zinc-300 hover:bg-zinc-700"
+            }`}
+          >
+            By Person
+          </button>
+        </div>
       </div>
 
-      {feeItems.length > 0 && (
-        <div className="space-y-1">
-          <p className="text-xs text-zinc-500 px-1 uppercase tracking-wider">Shared fees</p>
-          <div className="space-y-2">
-            {feeItems.map((item) => (
-              <ItemRow
-                key={item.id}
-                item={item}
-                selectors={[]}
-                isSelected={false}
-                isFee={true}
-                onToggle={() => {}}
-              />
-            ))}
+      {viewMode === "by-item" ? (
+        <>
+          <div ref={listRef} className="space-y-2">
+            {regularItems.map((item) => {
+              const myQty = getMyQuantity(item.id);
+              const otherAllocated = getOtherAllocated(item.id);
+              const maxAvailable = item.quantity - otherAllocated;
+              return (
+                <ItemRow
+                  key={item.id}
+                  item={item}
+                  selectors={selectorsFor(item.id)}
+                  isSelected={isSelected(item.id)}
+                  isFee={false}
+                  onToggle={() => toggle(item)}
+                  myQuantity={myQty}
+                  maxQuantity={maxAvailable}
+                  onQuantityChange={(qty) => updateQuantity(item, qty)}
+                />
+              );
+            })}
           </div>
-        </div>
+
+          {feeItems.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs text-zinc-500 px-1 uppercase tracking-wider">Shared fees</p>
+              <div className="space-y-2">
+                {feeItems.map((item) => (
+                  <ItemRow
+                    key={item.id}
+                    item={item}
+                    selectors={[]}
+                    isSelected={false}
+                    isFee={true}
+                    onToggle={() => {}}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <ByPersonView participants={participants} items={items} selections={localSelections} />
       )}
     </div>
   );
