@@ -1,20 +1,34 @@
-import type { LedgerItem, LedgerParticipant, LedgerSelection, LedgerPayment, LedgerResult } from "./types";
+import type {
+  LedgerItem,
+  LedgerParticipant,
+  LedgerSelection,
+  LedgerPayment,
+  LedgerResult,
+  ParticipantBreakdown,
+  ParticipantItemShare,
+} from "./types";
 
-export function computeLedger(
+/**
+ * Per-person breakdown: item shares, apportioned fees and tip, and the net
+ * position after payments. computeLedger simplifies these nets into transfers;
+ * anything that has to explain a number — an export, a receipt — reads this so
+ * the arithmetic exists in exactly one place.
+ */
+export function computeBreakdown(
   items: LedgerItem[],
   participants: LedgerParticipant[],
   selections: LedgerSelection[],
   payments: LedgerPayment[],
   tip: number,
   actualPaidTotal?: number | null
-): LedgerResult[] {
+): ParticipantBreakdown[] {
   const n = participants.length;
   if (n === 0) return [];
 
-  const owes: Record<string, number> = {};
+  const itemShares: Record<string, ParticipantItemShare[]> = {};
   const foodSubtotal: Record<string, number> = {};
   for (const p of participants) {
-    owes[p.id] = 0;
+    itemShares[p.id] = [];
     foodSubtotal[p.id] = 0;
   }
 
@@ -29,52 +43,64 @@ export function computeLedger(
     if (totalAllocated === 0) continue;
     for (const s of itemSelections) {
       const share = (s.quantity / totalAllocated) * parseFloat(item.totalPrice);
-      owes[s.participantId] += share;
-      foodSubtotal[s.participantId] += share;
+      itemShares[s.participantId]?.push({ itemId: item.id, quantity: s.quantity, amount: share });
+      if (foodSubtotal[s.participantId] !== undefined) foodSubtotal[s.participantId] += share;
     }
   }
 
   const grandFoodSubtotal = Object.values(foodSubtotal).reduce((a, b) => a + b, 0);
-
-  // Step 2: distribute receipt fees proportionally by food subtotal
   const totalFees = feeItems.reduce((sum, f) => sum + parseFloat(f.totalPrice), 0);
-  if (totalFees > 0) {
-    for (const pid of Object.keys(owes)) {
-      const proportion = grandFoodSubtotal > 0 ? foodSubtotal[pid] / grandFoodSubtotal : 1 / n;
-      owes[pid] += totalFees * proportion;
-    }
-  }
 
-  // Step 2b: apply discount ratio (benefits whole table) to food + fees only
-  if (actualPaidTotal != null && actualPaidTotal >= 0) {
-    const totalBill = grandFoodSubtotal + totalFees;
-    if (totalBill > 0) {
-      const discountRatio = actualPaidTotal / totalBill;
-      for (const pid of Object.keys(owes)) {
-        // Scale the food+fees portion (currently in owes), preserving tip (not yet added)
-        owes[pid] *= discountRatio;
-      }
-    }
-  }
+  // Step 2b: a discount benefits the whole table, so it scales food and fees
+  // alike. Tip is added afterwards and is never discounted.
+  const totalBill = grandFoodSubtotal + totalFees;
+  const discountRatio =
+    actualPaidTotal != null && actualPaidTotal >= 0 && totalBill > 0
+      ? actualPaidTotal / totalBill
+      : 1;
 
-  // Step 3: distribute tip proportionally by food subtotal
-  if (tip > 0) {
-    for (const pid of Object.keys(owes)) {
-      const proportion = grandFoodSubtotal > 0 ? foodSubtotal[pid] / grandFoodSubtotal : 1 / n;
-      owes[pid] += tip * proportion;
-    }
-  }
-
-  // Step 4: net = owes - paid
   const paid: Record<string, number> = {};
   for (const p of participants) paid[p.id] = 0;
   for (const payment of payments) {
     paid[payment.participantId] = (paid[payment.participantId] ?? 0) + payment.amount;
   }
 
+  return participants.map((p) => {
+    const proportion = grandFoodSubtotal > 0 ? foodSubtotal[p.id] / grandFoodSubtotal : 1 / n;
+
+    // Step 2: receipt fees are apportioned by share of the food, not per head.
+    const fees = totalFees * proportion * discountRatio;
+    // Step 3: tip follows the same proportion.
+    const tipShare = tip > 0 ? tip * proportion : 0;
+
+    const shares = itemShares[p.id].map((s) => ({ ...s, amount: s.amount * discountRatio }));
+    const owes = shares.reduce((sum, s) => sum + s.amount, 0) + fees + tipShare;
+
+    return {
+      participantId: p.id,
+      itemShares: shares,
+      fees,
+      tip: tipShare,
+      owes,
+      paid: paid[p.id],
+      net: owes - paid[p.id],
+    };
+  });
+}
+
+export function computeLedger(
+  items: LedgerItem[],
+  participants: LedgerParticipant[],
+  selections: LedgerSelection[],
+  payments: LedgerPayment[],
+  tip: number,
+  actualPaidTotal?: number | null
+): LedgerResult[] {
+  if (participants.length === 0) return [];
+
   const net: Record<string, number> = {};
-  for (const pid of Object.keys(owes)) {
-    net[pid] = owes[pid] - paid[pid];
+  for (const b of computeBreakdown(items, participants, selections, payments, tip, actualPaidTotal)) {
+    net[b.participantId] = b.net;
   }
 
   // Step 5: greedy debt simplification

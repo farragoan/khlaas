@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeLedger } from "./compute";
+import { computeBreakdown, computeLedger } from "./compute";
 import type { LedgerItem, LedgerParticipant, LedgerSelection, LedgerPayment } from "./types";
 
 const p = (id: string): LedgerParticipant => ({ id, displayName: id });
@@ -301,5 +301,84 @@ describe("computeLedger", () => {
       expect(carolEntry?.toParticipant).toBe("alice");
       expect(carolEntry?.amount).toBeCloseTo(270, 2);
     });
+  });
+});
+
+describe("computeBreakdown", () => {
+  it("splits an item by allocated quantity, not per head", () => {
+    const [alice, bob] = computeBreakdown(
+      [{ id: "i1", totalPrice: "300.00", isFee: false, quantity: 3 }],
+      [p("alice"), p("bob")],
+      [
+        { participantId: "alice", itemId: "i1", quantity: 2 },
+        { participantId: "bob", itemId: "i1", quantity: 1 },
+      ],
+      [],
+      0
+    );
+    expect(alice.itemShares).toHaveLength(1);
+    expect(alice.itemShares[0].amount).toBeCloseTo(200, 2);
+    expect(bob.itemShares[0].amount).toBeCloseTo(100, 2);
+  });
+
+  it("apportions fees and tip by share of the food", () => {
+    // alice ate 100, bob ate 300. fees 40, tip 80 → alice takes a quarter.
+    const [alice, bob] = computeBreakdown(
+      [item("i1", "100.00"), item("i2", "300.00"), item("f1", "40.00", true)],
+      [p("alice"), p("bob")],
+      [sel("alice", "i1"), sel("bob", "i2")],
+      [],
+      80
+    );
+    expect(alice.fees).toBeCloseTo(10, 2);
+    expect(alice.tip).toBeCloseTo(20, 2);
+    expect(bob.fees).toBeCloseTo(30, 2);
+    expect(bob.tip).toBeCloseTo(60, 2);
+  });
+
+  it("owes equals item shares plus fees plus tip, so an export reconciles", () => {
+    const breakdown = computeBreakdown(
+      [item("i1", "100.00"), item("i2", "300.00"), item("f1", "40.00", true)],
+      [p("alice"), p("bob")],
+      [sel("alice", "i1"), sel("bob", "i2")],
+      [pay("alice", 220)],
+      80
+    );
+    for (const b of breakdown) {
+      const lines = b.itemShares.reduce((sum, s) => sum + s.amount, 0);
+      expect(lines + b.fees + b.tip).toBeCloseTo(b.owes, 6);
+      expect(b.net).toBeCloseTo(b.owes - b.paid, 6);
+    }
+  });
+
+  it("a discount scales food and fees but never the tip", () => {
+    // bill is 400 food + 40 fees = 440, actually paid 220 → half price.
+    const [alice] = computeBreakdown(
+      [item("i1", "100.00"), item("i2", "300.00"), item("f1", "40.00", true)],
+      [p("alice"), p("bob")],
+      [sel("alice", "i1"), sel("bob", "i2")],
+      [],
+      80,
+      220
+    );
+    expect(alice.itemShares[0].amount).toBeCloseTo(50, 2);
+    expect(alice.fees).toBeCloseTo(5, 2);
+    expect(alice.tip).toBeCloseTo(20, 2);
+  });
+
+  it("nets agree with the transfers computeLedger derives from them", () => {
+    const billItems = [item("i1", "100.00"), item("i2", "200.00")];
+    const people = [p("alice"), p("bob")];
+    const claims = [sel("alice", "i1"), sel("bob", "i2")];
+    const paid = [pay("alice", 300)];
+
+    const breakdown = computeBreakdown(billItems, people, claims, paid, 0);
+    const transfers = computeLedger(billItems, people, claims, paid, 0);
+    const owedByBob = breakdown.find((b) => b.participantId === "bob")!.net;
+    expect(transfers[0].amount).toBeCloseTo(owedByBob, 2);
+  });
+
+  it("returns nothing when there are no participants", () => {
+    expect(computeBreakdown([item("i1", "100.00")], [], [], [], 0)).toEqual([]);
   });
 });
