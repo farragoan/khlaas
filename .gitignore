@@ -49,3 +49,7 @@ next-env.d.ts
 
 # local mimocode plugin cache
 /.mimocode/
+
+# mimocode scratch artifacts
+.mimocode-tool-test.txt
+.mimocode/
