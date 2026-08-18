@@ -1,5 +1,17 @@
 # Bill edit-lock, viewable expired bills, and reopen activity history
 
+> **Status as of 2026-08-18: not implemented.** Nothing in this document has
+> shipped —  still runs, 
+> does not exist, the expired dead-end is still in ,
+> and there is no activity-history table, migration or endpoint. The reopen and
+> close-edit routes referenced below already existed when this was written and
+> are not evidence that the design landed.
+>
+> Line numbers cited here were correct on 2026-07-06 and have since drifted
+> (the expired block moved from :530 to :549). Re-read the files before
+> implementing. The problem is still live and growing: 39 of 51 bills are
+> currently , so they appear in history but dead-end when opened.
+
 ## Problem
 
 Today, a `split_tables` row (a "bill") gets a hard `status = 'expired'` flip via an
