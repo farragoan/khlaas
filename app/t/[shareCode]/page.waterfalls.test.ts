@@ -40,12 +40,12 @@ describe("handleContinue concurrent fetches", () => {
       fetch("/api/user-profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ displayName: "Test" }),
+        body: JSON.stringify({ displayName: "Test", tableId: "t1" }),
       }),
       fetch("/api/participants", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "x-session-token": "tok" },
-        body: JSON.stringify({ displayName: "Test" }),
+        body: JSON.stringify({ displayName: "Test", tableId: "t1" }),
       })
     );
 
