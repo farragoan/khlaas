@@ -77,7 +77,16 @@ export const participants = pgTable(
     joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow(),
     splitsSubmittedAt: timestamp("splits_submitted_at", { withTimezone: true }),
   },
-  (t) => [index("idx_participants_table_id").on(t.tableId)]
+  (t) => [
+    index("idx_participants_table_id").on(t.tableId),
+    // A Clerk user is one person at a table. Partial because guests carry a
+    // null user_id and must stay unconstrained. Without this, the auto-join in
+    // app/t/[shareCode]/page.tsx mints a second row whenever localStorage is
+    // gone, and the person's selections silently split across two identities.
+    uniqueIndex("participants_table_user_unique")
+      .on(t.tableId, t.userId)
+      .where(sql`${t.userId} IS NOT NULL`),
+  ]
 );
 
 export const selections = pgTable(
