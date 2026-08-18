@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db/client";
 import { participants } from "@/lib/db/schema";
-import { JoinParticipantSchema } from "@/lib/schemas";
+import { JoinParticipantSchema, UpdateParticipantSchema } from "@/lib/schemas";
 import { hashToken } from "@/lib/auth";
-import { and, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -55,15 +55,12 @@ export async function PATCH(req: Request) {
   }
 
   const body = await req.json();
-  const { displayName, submitted, tableId } = body as { displayName?: string; submitted?: boolean; tableId?: string };
-
-  if (!tableId || typeof tableId !== "string" || tableId.trim() === "") {
-    return NextResponse.json({ error: "Missing tableId" }, { status: 400 });
+  const parsedBody = UpdateParticipantSchema.safeParse(body);
+  if (!parsedBody.success) {
+    return NextResponse.json({ error: parsedBody.error.flatten() }, { status: 400 });
   }
 
-  if (displayName !== undefined && (typeof displayName !== "string" || displayName.length < 1 || displayName.length > 50)) {
-    return NextResponse.json({ error: "Invalid display name" }, { status: 400 });
-  }
+  const { displayName, submitted, tableId } = parsedBody.data;
 
   if (displayName === undefined && !submitted) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
@@ -71,19 +68,19 @@ export async function PATCH(req: Request) {
 
   const hashedToken = hashToken(sessionToken);
   const [participant] = await db
-    .select({ id: participants.id })
+    .select({ id: participants.id, tableId: participants.tableId })
     .from(participants)
-    // A session token identifies one person at one table, so the lookup must
-    // be constrained to that table rather than searching every row globally.
-    .where(
-      and(
-        eq(participants.tableId, tableId),
-        eq(participants.sessionToken, hashedToken)
-      )
-    )
+    .where(eq(participants.sessionToken, hashedToken))
     .limit(1);
 
   if (!participant) {
+    return NextResponse.json({ error: "Invalid session" }, { status: 403 });
+  }
+
+  // A session token belongs to one person at one table. Callers that name the
+  // table must name the right one; the check is here rather than in the WHERE
+  // clause so a client that has not learned to send tableId yet still works.
+  if (tableId && participant.tableId !== tableId) {
     return NextResponse.json({ error: "Invalid session" }, { status: 403 });
   }
 

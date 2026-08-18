@@ -11,6 +11,14 @@ export const JoinParticipantSchema = z.object({
   upiId: z.string().max(50).optional(),
 });
 
+export const UpdateParticipantSchema = z.object({
+  // Optional so a browser still running an older bundle keeps working; when it
+  // is present the route checks it against the token's own table.
+  tableId: z.string().uuid().optional(),
+  displayName: z.string().min(1).max(50).optional(),
+  submitted: z.boolean().optional(),
+});
+
 export const AddSelectionSchema = z.object({
   participantId: z.string().uuid(),
   itemId: z.string().uuid(),
