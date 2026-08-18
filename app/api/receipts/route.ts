@@ -8,10 +8,16 @@ import { eq } from "drizzle-orm";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 // flash-lite over flash: same vision quality on receipts, and thinking is off by
-// default here whereas gemini-2.5-flash reasons before every answer — a latency
-// tax we pay on each scan for no gain on a fixed extraction task.
+// default here whereas the full flash models reason before every answer — a
+// latency tax we pay on each scan for no gain on a fixed extraction task.
+//
+// Pinned to an exact version, not `gemini-flash-lite-latest`: a silent model
+// swap under a schema-constrained extraction is a worse failure than a loud
+// 404. The cost of pinning is that retirements have to be followed — 2.5-flash-lite
+// was withdrawn under us and every scan 404'd until this was bumped, so when
+// scans start failing wholesale, check this line first.
 const GOOGLE_AI_API_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent";
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent";
 
 interface OcrItem {
   name: string;
@@ -147,7 +153,6 @@ async function extractViaGoogleAI(imageBase64: string): Promise<OcrResult> {
 
 async function extractReceiptItems(imageBase64: string): Promise<OcrResult> {
   if (process.env.USE_OPENROUTER === "true") return extractViaOpenRouter(imageBase64);
-  console.log("Using Google!");
   return extractViaGoogleAI(imageBase64);
 }
 
@@ -175,7 +180,13 @@ export async function POST(req: Request) {
 
   let ocr: OcrResult;
   try { ocr = await extractReceiptItems(imageBase64); }
-  catch { return NextResponse.json({ error: "Failed to process the image. Please try again." }, { status: 502 }); }
+  catch (err) {
+    // Users only ever saw "Failed to process the image", so a retired upstream
+    // model looked identical to a blurry photo and went unnoticed for days.
+    // The upstream reason belongs in the logs even though it never reaches them.
+    console.error("Receipt OCR failed:", err);
+    return NextResponse.json({ error: "Failed to process the image. Please try again." }, { status: 502 });
+  }
 
   if (ocr.not_a_receipt) return NextResponse.json({ error: "That doesn't look like a receipt. Please upload a clear photo of a bill." }, { status: 422 });
   if (ocr.items.length === 0) return NextResponse.json({ error: "Couldn't find any items on this receipt. Please try a clearer photo." }, { status: 422 });
