@@ -78,6 +78,17 @@ const OCR_RESPONSE_SCHEMA = {
   required: ["not_a_receipt", "items", "tax", "service_charge", "other_fees", "total"],
 } as const;
 
+/**
+ * A receipt's subtotal line is a restatement of the items above it, not a charge.
+ * When the model reports one under other_fees it lands as a shared fee and gets
+ * added on top of every item, roughly doubling the bill and splitting the
+ * phantom amount across everyone. Matched narrowly on purpose: a real charge
+ * called "Total GST" has to survive, so only the restatement words are dropped.
+ */
+export function isTotalLine(name: string): boolean {
+  return /^\s*(sub[\s-]?total|grand[\s-]?total|total|net[\s-]?(amount|payable)|amount[\s-]?payable|bill[\s-]?(amount|total))\s*:?\s*$/i.test(name);
+}
+
 function parseOcrJson(content: string): OcrResult {
   const stripped = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
   const jsonMatch = stripped.match(/\{[\s\S]*\}/);
@@ -198,7 +209,9 @@ export async function POST(req: Request) {
   if (ocr.tax && ocr.tax > 0) itemRows.push({ tableId, name: "Tax", unitPrice: String(ocr.tax), quantity: 1, sortOrder: 1000, isFee: true });
   if (ocr.service_charge && ocr.service_charge > 0) itemRows.push({ tableId, name: "Service Charge", unitPrice: String(ocr.service_charge), quantity: 1, sortOrder: 1001, isFee: true });
   for (const fee of ocr.other_fees ?? []) {
-    if (fee.amount > 0) itemRows.push({ tableId, name: fee.name, unitPrice: String(fee.amount), quantity: 1, sortOrder: 1002, isFee: true });
+    if (fee.amount > 0 && !isTotalLine(fee.name)) {
+      itemRows.push({ tableId, name: fee.name, unitPrice: String(fee.amount), quantity: 1, sortOrder: 1002, isFee: true });
+    }
   }
 
   try {
