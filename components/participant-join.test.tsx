@@ -51,15 +51,10 @@ describe("ParticipantJoin", () => {
 
     it("joins automatically when clicking the button", async () => {
       mockSignedIn("Bob");
-      vi.mocked(global.fetch)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({}),
-        } as never)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({ participantId: "p1" }),
-        } as never);
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ participantId: "p1" }),
+      } as never);
 
       render(<ParticipantJoin tableId="t1" onJoined={mockOnJoined} />);
       fireEvent.click(screen.getByText("Join as Bob"));
@@ -76,13 +71,13 @@ describe("ParticipantJoin", () => {
   });
 
   describe("signed-out user", () => {
-    it("shows both sign-in and guest options", () => {
+    it("renders 'Continue with Google' button and GoogleOneTap, no guest option", () => {
       mockSignedOut();
       render(<ParticipantJoin tableId="t1" onJoined={mockOnJoined} />);
 
       expect(screen.getByText("Continue with Google")).toBeDefined();
-      expect(screen.getByText("Continue as guest")).toBeDefined();
       expect(screen.getByTestId("google-one-tap")).toBeDefined();
+      expect(screen.queryByText("Continue as guest")).toBeNull();
     });
 
     it("does not render One Tap once signed in", () => {
@@ -100,55 +95,6 @@ describe("ParticipantJoin", () => {
       // withSignUp keeps new and returning users on one flow — without it,
       // an unrecognised Google account dead-ends on external_account_not_found.
       expect(mockOpenSignIn).toHaveBeenCalledWith({ withSignUp: true });
-    });
-
-    it("shows name form when clicking continue as guest", () => {
-      mockSignedOut();
-      render(<ParticipantJoin tableId="t1" onJoined={mockOnJoined} />);
-      fireEvent.click(screen.getByText("Continue as guest"));
-
-      expect(screen.getByPlaceholderText("Your name")).toBeDefined();
-      expect(screen.getByText("Join table")).toBeDefined();
-    });
-  });
-
-  describe("guest flow", () => {
-    it("collects name and joins", async () => {
-      mockSignedOut();
-      vi.mocked(global.fetch).mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ participantId: "p2" }),
-      } as never);
-
-      render(<ParticipantJoin tableId="t1" onJoined={mockOnJoined} />);
-      fireEvent.click(screen.getByText("Continue as guest"));
-
-      const input = screen.getByPlaceholderText("Your name");
-      fireEvent.change(input, { target: { value: "Guest User" } });
-      fireEvent.click(screen.getByText("Join table"));
-
-      await waitFor(() => {
-        expect(mockOnJoined).toHaveBeenCalledWith({
-          participantId: "p2",
-          displayName: "Guest User",
-          sessionToken: expect.any(String),
-          tableId: "t1",
-        });
-      });
-    });
-
-    it("shows sign-in link from guest form", () => {
-      mockSignedOut();
-      render(<ParticipantJoin tableId="t1" onJoined={mockOnJoined} />);
-      fireEvent.click(screen.getByText("Continue as guest"));
-
-      const signInLink = screen.getByText(
-        "Sign in instead to save your bill history"
-      );
-      fireEvent.click(signInLink);
-
-      expect(screen.getByText("Continue with Google")).toBeDefined();
-      expect(screen.getByText("Continue as guest")).toBeDefined();
     });
   });
 });
