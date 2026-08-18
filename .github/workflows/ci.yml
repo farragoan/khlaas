@@ -1,0 +1,44 @@
+# Until this existed, nothing ran the test suite. 92 tests were in the repo and
+# every one of them only ran when somebody remembered to. A bug therefore had no
+# way to be caught before a user hit it in production.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Tests
+        run: pnpm run test
+
+      - name: Lint
+        run: pnpm run lint
+
+      # A migration that exists as a file but was never registered in the
+      # journal applies to nobody, and the app then runs against a schema it
+      # does not have. That happened once; this makes it a build failure.
+      - name: Migration files and journal agree
+        run: |
+          files=$(ls drizzle/*.sql | wc -l | tr -d ' ')
+          entries=$(node -e "console.log(require('./drizzle/meta/_journal.json').entries.length)")
+          echo "sql files: $files, journal entries: $entries"
+          if [ "$files" != "$entries" ]; then
+            echo "::error::$files migration files but $entries journal entries — run drizzle-kit generate, do not hand-write .sql"
+            exit 1
+          fi
