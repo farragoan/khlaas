@@ -4,7 +4,7 @@ import { db } from "@/lib/db/client";
 import { participants } from "@/lib/db/schema";
 import { JoinParticipantSchema } from "@/lib/schemas";
 import { hashToken } from "@/lib/auth";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -20,18 +20,27 @@ export async function POST(req: Request) {
   // Attach Clerk userId if the request comes from a signed-in user
   const { userId } = await auth();
 
-  const participantRows = await db
-    .insert(participants)
-    .values({ tableId, displayName, sessionToken: hashedToken, upiId: upiId ?? null, userId: userId ?? null })
-    .returning()
-    .catch(() =>
-      // upi_id column not yet migrated — insert without it
-      db
+  // A signed-in user is one participant per table, enforced by the partial
+  // unique index on (table_id, user_id). Reopening a share link after
+  // localStorage is gone reclaims the existing row and rotates its session
+  // token onto the new client, rather than minting a second identity that
+  // splits the person's selections across two rows.
+  //
+  // displayName is deliberately not overwritten: reopening the link on another
+  // device shouldn't rename someone at a table where others already know them.
+  const insert = { tableId, displayName, sessionToken: hashedToken, upiId: upiId ?? null, userId: userId ?? null };
+
+  const [participant] = userId
+    ? await db
         .insert(participants)
-        .values({ tableId, displayName, sessionToken: hashedToken, userId: userId ?? null })
+        .values(insert)
+        .onConflictDoUpdate({
+          target: [participants.tableId, participants.userId],
+          targetWhere: sql`${participants.userId} IS NOT NULL`,
+          set: { sessionToken: hashedToken },
+        })
         .returning()
-    );
-  const [participant] = participantRows;
+    : await db.insert(participants).values(insert).returning();
 
   return NextResponse.json(
     { participantId: participant.id, displayName: participant.displayName },
@@ -71,20 +80,10 @@ export async function PATCH(req: Request) {
   if (displayName) updates.displayName = displayName;
   if (submitted) updates.splitsSubmittedAt = new Date();
 
-  try {
-    await db
-      .update(participants)
-      .set(updates)
-      .where(eq(participants.id, participant.id));
-  } catch {
-    // splits_submitted_at column not yet migrated — update only displayName
-    if (displayName) {
-      await db
-        .update(participants)
-        .set({ displayName })
-        .where(eq(participants.id, participant.id));
-    }
-  }
+  await db
+    .update(participants)
+    .set(updates)
+    .where(eq(participants.id, participant.id));
 
   return NextResponse.json({ ok: true });
 }
