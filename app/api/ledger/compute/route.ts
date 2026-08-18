@@ -6,6 +6,7 @@ import { verifyHost } from "@/lib/auth";
 import { auth } from "@clerk/nextjs/server";
 import { eq } from "drizzle-orm";
 import { computeLedger } from "@/lib/ledger/compute";
+import { EXPIRED_ERROR, EXPIRED_STATUS, isExpired } from "@/lib/table-lock";
 
 export async function POST(req: Request) {
   const sessionToken = req.headers.get("x-session-token");
@@ -35,6 +36,10 @@ export async function POST(req: Request) {
 
   if (!table) {
     return NextResponse.json({ error: "Table not found" }, { status: 404 });
+  }
+
+  if (isExpired(table.status)) {
+    return NextResponse.json({ error: EXPIRED_ERROR }, { status: EXPIRED_STATUS });
   }
 
   const [tableItems, tableParticipants, tablePayments] = await Promise.all([

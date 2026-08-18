@@ -3,7 +3,7 @@
 import { use, useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Share2, Users, Pencil, Check, Clock, ChevronDown, X } from "lucide-react";
+import { Share2, Users, Pencil, Check, ChevronDown, X } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "@clerk/nextjs";
 import { nanoid } from "nanoid";
@@ -13,6 +13,7 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import { ParticipantJoin } from "@/components/participant-join";
 import { ReceiptUpload } from "@/components/receipt-upload";
 import { ProcessingState } from "@/components/processing-state";
+import { ExpiredBillView } from "@/components/expired-bill-view";
 import { ItemList } from "@/components/item-list";
 import { ShareRoomSheet } from "@/components/share-room-sheet";
 import { CurrencyProvider, getCurrencySymbol } from "@/lib/currency-context";
@@ -365,7 +366,10 @@ export default function TablePage({
 
   // Auto-join signed-in users (skip join modal)
   useEffect(() => {
-    if (!data || session || !isSignedIn || autoJoiningRef.current) return;
+    // An expired bill's roster is part of the record; opening the link months
+    // later must not add you to it.
+    if (!data || data.table.status === "expired") return;
+    if (session || !isSignedIn || autoJoiningRef.current) return;
     autoJoiningRef.current = true;
     const sessionToken = nanoid(32);
     const displayName = user?.fullName ?? user?.firstName ?? "You";
@@ -546,23 +550,20 @@ export default function TablePage({
     setPhase("share");
   }
 
+  // Expired bills stay readable. Nothing was deleted when the timer ran out —
+  // only the ability to change it — so the last state of the bill is shown
+  // rather than a dead end.
   if (table.status === "expired") {
     return (
-      <div className="flex flex-col items-center justify-center min-h-dvh bg-[#0F0F0F] px-6 text-center gap-4">
-        <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center">
-          <Clock size={28} className="text-zinc-400" />
-        </div>
-        <div className="space-y-1">
-          <h2 className="text-white font-semibold text-lg">This bill has expired</h2>
-          <p className="text-zinc-500 text-sm">Bills are automatically cleared after 24 hours.</p>
-        </div>
-        <a
-          href="/"
-          className="mt-2 px-6 py-3 bg-[var(--brand)] text-black font-semibold rounded-2xl text-sm"
-        >
-          Start a new bill
-        </a>
-      </div>
+      <CurrencyProvider value={currency}>
+        <ExpiredBillView
+          table={table}
+          items={items}
+          participants={participants}
+          selections={selections}
+          payments={data.payments}
+        />
+      </CurrencyProvider>
     );
   }
 

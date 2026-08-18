@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
-import { payments, participants } from "@/lib/db/schema";
+import { payments, participants, splitTables } from "@/lib/db/schema";
 import { PaymentSchema } from "@/lib/schemas";
 import { verifyHost, hashToken } from "@/lib/auth";
 import { auth } from "@clerk/nextjs/server";
+import { EXPIRED_ERROR, EXPIRED_STATUS, isExpired } from "@/lib/table-lock";
 import { and, eq } from "drizzle-orm";
 
 export async function POST(req: Request) {
@@ -19,6 +20,16 @@ export async function POST(req: Request) {
   }
 
   const { tableId, participantId, amount } = parsed.data;
+
+  const [table] = await db
+    .select({ status: splitTables.status })
+    .from(splitTables)
+    .where(eq(splitTables.id, tableId))
+    .limit(1);
+
+  if (isExpired(table?.status)) {
+    return NextResponse.json({ error: EXPIRED_ERROR }, { status: EXPIRED_STATUS });
+  }
 
   // Verify requester is a participant in this table
   const hashedToken = hashToken(sessionToken);

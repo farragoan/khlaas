@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db/client";
-import { participants } from "@/lib/db/schema";
+import { participants, splitTables } from "@/lib/db/schema";
 import { JoinParticipantSchema, UpdateParticipantSchema } from "@/lib/schemas";
 import { hashToken } from "@/lib/auth";
+import { EXPIRED_ERROR, EXPIRED_STATUS, isExpired } from "@/lib/table-lock";
 import { eq, sql } from "drizzle-orm";
 
 export async function POST(req: Request) {
@@ -16,6 +17,19 @@ export async function POST(req: Request) {
 
   const { tableId, displayName, sessionToken, upiId } = parsed.data;
   const hashedToken = hashToken(sessionToken);
+
+  // Nobody joins a bill that is already history — including the auto-join that
+  // fires for signed-in visitors, which would otherwise add a stranger to the
+  // roster of a settled-by-timeout bill just because they opened the link.
+  const [table] = await db
+    .select({ status: splitTables.status })
+    .from(splitTables)
+    .where(eq(splitTables.id, tableId))
+    .limit(1);
+
+  if (isExpired(table?.status)) {
+    return NextResponse.json({ error: EXPIRED_ERROR }, { status: EXPIRED_STATUS });
+  }
 
   // Attach Clerk userId if the request comes from a signed-in user
   const { userId } = await auth();

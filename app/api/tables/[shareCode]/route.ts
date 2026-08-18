@@ -4,6 +4,7 @@ import { splitTables, items, participants, selections, ledgerEntries, payments }
 import { eq } from "drizzle-orm";
 import { verifyHost } from "@/lib/auth";
 import { auth } from "@clerk/nextjs/server";
+import { EXPIRED_ERROR, EXPIRED_STATUS, isExpired } from "@/lib/table-lock";
 
 export async function GET(
   req: Request,
@@ -103,6 +104,10 @@ export async function PATCH(
 
   if (!table) {
     return NextResponse.json({ error: "Table not found" }, { status: 404 });
+  }
+
+  if (isExpired(table.status)) {
+    return NextResponse.json({ error: EXPIRED_ERROR }, { status: EXPIRED_STATUS });
   }
 
   const { userId } = await auth();
