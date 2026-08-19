@@ -130,6 +130,11 @@ consistency check.
   monitoring system.
 - **No synthetic check on upstreams.** A retired model or a revoked key is
   invisible until someone tries to scan a receipt.
+- **13 React Compiler lint errors.** CI reports lint but does not gate on it,
+  because enabling the gate surfaced 13 errors that predate it. Mostly
+  `setState` called synchronously inside an effect. Drive to zero, then delete
+  `continue-on-error` from `.github/workflows/ci.yml`. Do not raise the
+  allowance to fit new violations.
 - **`hooks/use-table-data.ts` re-fetches unbounded.** `fetch_` depends on
   `data`, and the mount effect depends on `fetch_`, so every `setData` re-runs
   the effect and fires another fetch immediately.

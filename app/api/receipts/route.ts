@@ -4,20 +4,11 @@ import { splitTables, items } from "@/lib/db/schema";
 import { ProcessReceiptSchema } from "@/lib/schemas";
 import { verifyHost } from "@/lib/auth";
 import { auth } from "@clerk/nextjs/server";
+import { reportError } from "@/lib/observability";
+import { GOOGLE_AI_API_URL } from "@/lib/ocr-config";
 import { eq } from "drizzle-orm";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
-// flash-lite over flash: same vision quality on receipts, and thinking is off by
-// default here whereas the full flash models reason before every answer — a
-// latency tax we pay on each scan for no gain on a fixed extraction task.
-//
-// Pinned to an exact version, not `gemini-flash-lite-latest`: a silent model
-// swap under a schema-constrained extraction is a worse failure than a loud
-// 404. The cost of pinning is that retirements have to be followed — 2.5-flash-lite
-// was withdrawn under us and every scan 404'd until this was bumped, so when
-// scans start failing wholesale, check this line first.
-const GOOGLE_AI_API_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent";
 
 interface OcrItem {
   name: string;
@@ -180,7 +171,10 @@ export async function POST(req: Request) {
   let table: { id: string; status: string } | undefined;
   try {
     [table] = await db.select({ id: splitTables.id, status: splitTables.status }).from(splitTables).where(eq(splitTables.id, tableId)).limit(1);
-  } catch { return NextResponse.json({ error: "Internal server error" }, { status: 500 }); }
+  } catch (err) {
+    await reportError(err, { operation: "load table before receipt scan", tableId });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 
   if (!table) return NextResponse.json({ error: "Table not found" }, { status: 404 });
   if (table.status !== "active") return NextResponse.json({ error: "Receipt already processed" }, { status: 409 });
@@ -195,7 +189,7 @@ export async function POST(req: Request) {
     // Users only ever saw "Failed to process the image", so a retired upstream
     // model looked identical to a blurry photo and went unnoticed for days.
     // The upstream reason belongs in the logs even though it never reaches them.
-    console.error("Receipt OCR failed:", err);
+    await reportError(err, { operation: "receipt OCR", tableId });
     return NextResponse.json({ error: "Failed to process the image. Please try again." }, { status: 502 });
   }
 
@@ -217,7 +211,10 @@ export async function POST(req: Request) {
   try {
     await db.insert(items).values(itemRows);
     await db.update(splitTables).set({ status: "items_ready" }).where(eq(splitTables.id, tableId));
-  } catch { return NextResponse.json({ error: "Internal server error" }, { status: 500 }); }
+  } catch (err) {
+    await reportError(err, { operation: "persist OCR items", tableId, itemCount: itemRows.length });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true, itemCount: itemRows.length });
 }

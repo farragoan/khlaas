@@ -34,6 +34,8 @@ export async function fetchHistoryPage(
     try {
       parsedCursor = JSON.parse(Buffer.from(cursor, "base64").toString("utf8"));
     } catch {
+      // The cursor is client-supplied and opaque; a malformed one just means
+      // "start from the beginning". Nothing is lost, so nothing to report.
       parsedCursor = null;
     }
   }

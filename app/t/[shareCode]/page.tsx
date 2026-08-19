@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useRef, useState, useCallback } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Share2, Users, Pencil, Check, ChevronDown, X } from "lucide-react";
@@ -426,12 +427,12 @@ export default function TablePage({
           >
             Try again
           </button>
-          <a
+          <Link
             href="/"
             className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
           >
             Go home
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -713,12 +714,12 @@ export default function TablePage({
             </p>
             <ProcessingState />
             <div className="flex flex-col items-center gap-3 mt-6">
-              <a
+              <Link
                 href="/"
                 className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
               >
                 Go home
-              </a>
+              </Link>
             </div>
           </motion.div>
         )}

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Clock, Lock } from "lucide-react";
 import { Price } from "@/components/price";
 import { ByPersonView } from "@/components/by-person-view";
@@ -163,18 +164,18 @@ export function ExpiredBillView({
         </div>
       )}
 
-      <a
+      <Link
         href="/"
         className="mt-8 w-full h-12 flex items-center justify-center bg-[var(--brand)] text-black font-semibold rounded-2xl text-sm"
       >
         Start a new bill
-      </a>
-      <a
+      </Link>
+      <Link
         href="/history"
         className="mt-3 mb-2 text-center text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
       >
         Back to your bills
-      </a>
+      </Link>
     </main>
   );
 }
