@@ -6,7 +6,9 @@ import { verifyHost } from "@/lib/auth";
 import { auth } from "@clerk/nextjs/server";
 import { reportError } from "@/lib/observability";
 import { GOOGLE_AI_API_URL } from "@/lib/ocr-config";
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
+import { sanitizeOcrItems, cleanAmount, cleanName } from "@/lib/ocr-sanitize";
+import { leaseValue, LEASE_MS } from "@/lib/scan-lease";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -162,7 +164,7 @@ export async function POST(req: Request) {
   const sessionToken = req.headers.get("x-session-token");
   if (!sessionToken) return NextResponse.json({ error: "Missing session token" }, { status: 401 });
 
-  const body = await req.json();
+  const body = await req.json().catch(() => null);
   const parsed = ProcessReceiptSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
@@ -183,6 +185,46 @@ export async function POST(req: Request) {
   const host = await verifyHost(tableId, { sessionToken, clerkUserId: userId });
   if (!host) return NextResponse.json({ error: "Only the host can scan a receipt" }, { status: 403 });
 
+  // Claim the table before the multi-second OCR call. The status check above
+  // is only a read; two concurrent scans both pass it and would both insert
+  // every item. The claim is one conditional UPDATE, so exactly one wins.
+  const now = Date.now();
+  const lease = leaseValue(now);
+  const cutoff = now - LEASE_MS;
+  const leaseRe = "^scanning:[0-9]+$";
+  let claimed: { id: string }[];
+  try {
+    claimed = await db
+      .update(splitTables)
+      .set({ rawOcr: lease })
+      .where(
+        and(
+          eq(splitTables.id, tableId),
+          eq(splitTables.status, "active"),
+          sql`(${splitTables.rawOcr} IS NULL OR ${splitTables.rawOcr} !~ ${leaseRe}
+            OR (CASE WHEN ${splitTables.rawOcr} ~ ${leaseRe} THEN substring(${splitTables.rawOcr} from 10)::bigint ELSE 0 END) < ${cutoff})`
+        )
+      )
+      .returning({ id: splitTables.id });
+  } catch (err) {
+    await reportError(err, { operation: "claim table for receipt scan", tableId });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+  if (claimed.length === 0) {
+    return NextResponse.json({ error: "Receipt is already being processed" }, { status: 409 });
+  }
+
+  const releaseClaim = async () => {
+    try {
+      await db
+        .update(splitTables)
+        .set({ rawOcr: null })
+        .where(and(eq(splitTables.id, tableId), eq(splitTables.rawOcr, lease)));
+    } catch (err) {
+      await reportError(err, { operation: "release receipt scan claim", tableId });
+    }
+  };
+
   let ocr: OcrResult;
   try { ocr = await extractReceiptItems(imageBase64); }
   catch (err) {
@@ -190,29 +232,48 @@ export async function POST(req: Request) {
     // model looked identical to a blurry photo and went unnoticed for days.
     // The upstream reason belongs in the logs even though it never reaches them.
     await reportError(err, { operation: "receipt OCR", tableId });
+    await releaseClaim();
     return NextResponse.json({ error: "Failed to process the image. Please try again." }, { status: 502 });
   }
 
-  if (ocr.not_a_receipt) return NextResponse.json({ error: "That doesn't look like a receipt. Please upload a clear photo of a bill." }, { status: 422 });
-  if (ocr.items.length === 0) return NextResponse.json({ error: "Couldn't find any items on this receipt. Please try a clearer photo." }, { status: 422 });
+  if (ocr?.not_a_receipt) {
+    await releaseClaim();
+    return NextResponse.json({ error: "That doesn't look like a receipt. Please upload a clear photo of a bill." }, { status: 422 });
+  }
+  const cleanItems = sanitizeOcrItems(ocr?.items);
+  if (!cleanItems || cleanItems.length === 0) {
+    await releaseClaim();
+    return NextResponse.json({ error: "Couldn't find any items on this receipt. Please try a clearer photo." }, { status: 422 });
+  }
 
-  const itemRows = ocr.items.map((item, i) => ({
-    tableId, name: item.name, unitPrice: String(item.unit_price), quantity: item.quantity || 1, sortOrder: i, isFee: false,
+  const itemRows = cleanItems.map((item, i) => ({
+    tableId, name: item.name, unitPrice: String(item.unitPrice), quantity: item.quantity, sortOrder: i, isFee: false,
   }));
 
-  if (ocr.tax && ocr.tax > 0) itemRows.push({ tableId, name: "Tax", unitPrice: String(ocr.tax), quantity: 1, sortOrder: 1000, isFee: true });
-  if (ocr.service_charge && ocr.service_charge > 0) itemRows.push({ tableId, name: "Service Charge", unitPrice: String(ocr.service_charge), quantity: 1, sortOrder: 1001, isFee: true });
-  for (const fee of ocr.other_fees ?? []) {
-    if (fee.amount > 0 && !isTotalLine(fee.name)) {
-      itemRows.push({ tableId, name: fee.name, unitPrice: String(fee.amount), quantity: 1, sortOrder: 1002, isFee: true });
+  const tax = cleanAmount(ocr.tax);
+  const serviceCharge = cleanAmount(ocr.service_charge);
+  if (tax) itemRows.push({ tableId, name: "Tax", unitPrice: String(tax), quantity: 1, sortOrder: 1000, isFee: true });
+  if (serviceCharge) itemRows.push({ tableId, name: "Service Charge", unitPrice: String(serviceCharge), quantity: 1, sortOrder: 1001, isFee: true });
+  const otherFees = Array.isArray(ocr.other_fees) ? ocr.other_fees : [];
+  for (const fee of otherFees.slice(0, 20)) {
+    const name = cleanName(fee?.name);
+    const amount = cleanAmount(fee?.amount);
+    if (name && amount && !isTotalLine(name)) {
+      itemRows.push({ tableId, name, unitPrice: String(amount), quantity: 1, sortOrder: 1002, isFee: true });
     }
   }
 
   try {
-    await db.insert(items).values(itemRows);
-    await db.update(splitTables).set({ status: "items_ready" }).where(eq(splitTables.id, tableId));
+    // One atomic batch: items and the status flip land together or not at all,
+    // so a failure between them cannot leave items on a still-active bill that
+    // a re-scan would then duplicate.
+    await db.batch([
+      db.insert(items).values(itemRows),
+      db.update(splitTables).set({ status: "items_ready", rawOcr: null }).where(eq(splitTables.id, tableId)),
+    ]);
   } catch (err) {
     await reportError(err, { operation: "persist OCR items", tableId, itemCount: itemRows.length });
+    await releaseClaim();
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
