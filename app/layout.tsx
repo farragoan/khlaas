@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { BASE } from "@/lib/base-path";
 import { PwaRegister } from "@/components/pwa-register";
 import { InstallPrompt } from "@/components/install-prompt";
+import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -31,11 +32,13 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0F0F0F",
+  themeColor: "#1b140f",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
 };
+
+const themeInit = `try{var t=localStorage.getItem("khlaas-theme");if(t==="sunrise"||t==="playful"||t==="pastel"){document.documentElement.dataset.theme=t;var c={sunrise:"#1b140f",playful:"#0a1618",pastel:"#181322"}[t];var m=document.querySelectorAll('meta[name="theme-color"]');for(var i=0;i<m.length;i++)m[i].setAttribute("content",c)}}catch(e){}`;
 
 export default function RootLayout({
   children,
@@ -43,12 +46,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider appearance={{ variables: { colorPrimary: "#fbbf24" } }}>
-      <html lang="en" className={`${geistSans.variable} h-full`}>
+    <ClerkProvider appearance={{ variables: { colorPrimary: "#ff7a50" } }}>
+      <html lang="en" data-theme="sunrise" suppressHydrationWarning className={`${geistSans.variable} h-full`}>
+        <head>
+          <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+        </head>
         <body className="antialiased">
-          {children}
-          <PwaRegister />
-          <InstallPrompt />
+          <ThemeProvider>
+            {children}
+            <PwaRegister />
+            <InstallPrompt />
+          </ThemeProvider>
           <Toaster position="bottom-center" theme="dark" />
         </body>
       </html>
