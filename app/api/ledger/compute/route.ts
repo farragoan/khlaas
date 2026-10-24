@@ -4,7 +4,7 @@ import { splitTables, items, participants, selections, ledgerEntries, payments }
 import { ComputeLedgerSchema } from "@/lib/schemas";
 import { verifyHost } from "@/lib/auth";
 import { auth } from "@clerk/nextjs/server";
-import { eq } from "drizzle-orm";
+import { and, eq, notInArray } from "drizzle-orm";
 import { computeLedger } from "@/lib/ledger/compute";
 import { EXPIRED_ERROR, EXPIRED_STATUS, isExpired } from "@/lib/table-lock";
 
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing session token" }, { status: 401 });
   }
 
-  const body = await req.json();
+  const body = await req.json().catch(() => null);
   const parsed = ComputeLedgerSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -42,6 +42,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: EXPIRED_ERROR }, { status: EXPIRED_STATUS });
   }
 
+  // Settle is idempotent: a double-tap, a second tab or a retry after a timeout
+  // must not write a second set of transfers or rewrite the tip. Re-open is the
+  // only way back to an editable bill.
+  if (table.status === "settled") {
+    return alreadySettled(tableId);
+  }
+
   const [tableItems, tableParticipants, tablePayments] = await Promise.all([
     db.select().from(items).where(eq(items.tableId, tableId)),
     db.select().from(participants).where(eq(participants.tableId, tableId)),
@@ -56,6 +63,10 @@ export async function POST(req: Request) {
           .innerJoin(items, eq(selections.itemId, items.id))
           .where(eq(items.tableId, tableId))
       : [];
+
+  if (tableItems.length === 0) {
+    return NextResponse.json({ error: "no_items" }, { status: 400 });
+  }
 
   // Validate: all non-fee items must have at least one selection
   const unselectedItems = tableItems.filter(
@@ -112,22 +123,57 @@ export async function POST(req: Request) {
 
   const results = computeLedger(ledgerItems, ledgerParticipants, tableSelections, ledgerPayments, tip, actualPaidTotal);
 
-  // Save tip and mark table settled
-  await db
+  // Claim the table: only one request can flip it to settled. neon-http has no
+  // interactive transactions, so the claim is a single conditional UPDATE and
+  // the entries go in as one multi-row INSERT (atomic by itself). If that
+  // insert fails the claim is rolled back by hand so the bill is not left
+  // settled with no transfers.
+  const claimed = await db
     .update(splitTables)
     .set({ status: "settled", tip: String(tip) })
-    .where(eq(splitTables.id, tableId));
+    .where(and(eq(splitTables.id, tableId), notInArray(splitTables.status, ["settled", "expired"])))
+    .returning({ id: splitTables.id });
+
+  if (claimed.length === 0) {
+    const [current] = await db
+      .select({ status: splitTables.status })
+      .from(splitTables)
+      .where(eq(splitTables.id, tableId))
+      .limit(1);
+    if (isExpired(current?.status)) {
+      return NextResponse.json({ error: EXPIRED_ERROR }, { status: EXPIRED_STATUS });
+    }
+    return alreadySettled(tableId);
+  }
 
   if (results.length > 0) {
-    await db.insert(ledgerEntries).values(
-      results.map((r) => ({
-        tableId,
-        fromParticipant: r.fromParticipant,
-        toParticipant: r.toParticipant,
-        amount: String(r.amount),
-      }))
-    );
+    try {
+      await db.insert(ledgerEntries).values(
+        results.map((r) => ({
+          tableId,
+          fromParticipant: r.fromParticipant,
+          toParticipant: r.toParticipant,
+          amount: String(r.amount),
+        }))
+      );
+    } catch (err) {
+      console.error("ledger insert failed, releasing settle claim:", err);
+      try {
+        await db
+          .update(splitTables)
+          .set({ status: table.status })
+          .where(and(eq(splitTables.id, tableId), eq(splitTables.status, "settled")));
+      } catch (revertErr) {
+        console.error("failed to release settle claim, table left settled without entries:", revertErr);
+      }
+      return NextResponse.json({ error: "Could not settle the bill. Please try again" }, { status: 500 });
+    }
   }
 
   return NextResponse.json({ ok: true, entries: results });
+}
+
+async function alreadySettled(tableId: string) {
+  const entries = await db.select().from(ledgerEntries).where(eq(ledgerEntries.tableId, tableId));
+  return NextResponse.json({ ok: true, alreadySettled: true, entries });
 }
