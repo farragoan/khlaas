@@ -8,6 +8,7 @@ import { GoogleOneTap, SignInButton, UserButton, useAuth, useClerk } from "@cler
 import { useState } from "react";
 import Link from "next/link";
 import { History } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { AUTH_MODAL_PROPS } from "@/lib/auth-ui";
 
 const LOCALE_CURRENCY: Record<string, string> = {
@@ -59,7 +60,7 @@ export default function Home() {
   }
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-dvh px-6 bg-[#0F0F0F]">
+    <main className="flex flex-col items-center justify-center min-h-dvh px-6 bg-background">
       {/* Google One Tap: prompts returning users straight into a session without
           opening the modal. Renders nothing once a session exists. */}
       {isLoaded && !isSignedIn && <GoogleOneTap />}
@@ -101,7 +102,7 @@ export default function Home() {
           <button
             onClick={handleStart}
             disabled={creating}
-            className="w-full h-16 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-lg rounded-2xl flex items-center justify-center gap-2.5 transition-all disabled:opacity-60"
+            className="w-full h-16 bg-[var(--brand)] hover:brightness-110 active:scale-95 text-[var(--on-brand-label)] font-semibold text-lg rounded-2xl flex items-center justify-center gap-2.5 transition-all disabled:opacity-60"
           >
             {creating ? (
               <Loader2 size={22} className="animate-spin" />
@@ -116,6 +117,7 @@ export default function Home() {
 
         {startError && <p className="text-sm text-red-400">{startError}</p>}
         <p className="text-xs text-zinc-600">Free account needed · Works on any phone</p>
+        <ThemeToggle />
       </motion.div>
     </main>
   );
