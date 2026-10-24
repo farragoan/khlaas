@@ -19,7 +19,6 @@ import { ExpiredBillView } from "@/components/expired-bill-view";
 import { ItemList } from "@/components/item-list";
 import { ShareRoomSheet } from "@/components/share-room-sheet";
 import { CurrencyProvider, getCurrencySymbol } from "@/lib/currency-context";
-import type { Selection } from "@/hooks/use-table-data";
 import { parseLocalizedNumber } from "@/lib/utils";
 
 // Phase state machine for post-scan flow
@@ -285,7 +284,7 @@ export default function TablePage({
   const { data, error, loading, refresh } = useTableData(shareCode);
   const { session, saveSession } = useSession(data?.table?.id ?? null);
   const { isSignedIn, user } = useUser();
-  const [localSelections, setLocalSelections] = useState<Selection[] | null>(null);
+  const [settling, setSettling] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [showShareOverlay, setShowShareOverlay] = useState(false);
   const [editingParticipantId, setEditingParticipantId] = useState<string | undefined>(undefined);
@@ -305,7 +304,9 @@ export default function TablePage({
   const [useDiscount, setUseDiscount] = useState(false);
   const [discountTotalInput, setDiscountTotalInput] = useState("");
 
-  const hostTip = wantTip ? parseLocalizedNumber(tipInput || "0") : 0;
+  const parsedTip = wantTip ? parseLocalizedNumber(tipInput || "0") : 0;
+  // Never send a negative, NaN or absurd tip to the ledger.
+  const hostTip = Number.isFinite(parsedTip) ? Math.min(Math.max(parsedTip, 0), 10_000_000) : 0;
 
   // Phase transitions based on table status
   useEffect(() => {
@@ -380,14 +381,22 @@ export default function TablePage({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tableId: data.table.id, displayName, sessionToken }),
     })
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`join failed: ${r.status}`);
+        return r.json();
+      })
       .then(({ participantId }) => {
         if (participantId) {
           saveSession({ participantId, displayName, sessionToken, tableId: data.table.id });
           refresh();
+        } else {
+          autoJoiningRef.current = false;
         }
       })
-      .catch(() => { autoJoiningRef.current = false; });
+      .catch((err) => {
+        console.error("auto-join failed:", err);
+        autoJoiningRef.current = false;
+      });
   }, [data, session, isSignedIn, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pre-fill host name from Clerk / user profile
@@ -399,8 +408,7 @@ export default function TablePage({
 
   // Fetch user's UPI ID from profile (must be before early returns — Rules of Hooks)
   useEffect(() => {
-    const hostParticipant = data?.participants?.[0];
-    const isUserHost = !!session && !!hostParticipant && hostParticipant.id === session.participantId;
+    const isUserHost = !!session && !!data?.hostParticipantId && data.hostParticipantId === session.participantId;
     if (isUserHost) {
       fetch(BASE + "/api/user-profile")
         .then((res) => res.json())
@@ -440,7 +448,6 @@ export default function TablePage({
   }
 
   const { table, items, participants, selections } = data;
-  const activeSelections = localSelections ?? selections;
   const isHost = data.isHost;
   // Phase 6: Host always sees edit mode when items are ready
   const isEditing = table.status === "editing" || (isHost && table.status === "items_ready");
@@ -464,7 +471,7 @@ export default function TablePage({
   const hasAnyPayment = participants.some(
     (p) => (paymentMap.get(p.id) ?? 0) > 0
   );
-  const canSettle = unselectedItems.length === 0 && missingPayments.length === 0 && hasAnyPayment;
+  const canSettle = regularItems.length > 0 && unselectedItems.length === 0 && missingPayments.length === 0 && hasAnyPayment;
 
   function handleShare() {
     if (phase === "share") return; // inline share step is already showing this UI
@@ -472,7 +479,7 @@ export default function TablePage({
   }
 
   async function handleSettleClick() {
-    if (!session) return;
+    if (!session || settling) return;
     if (!canSettle) {
       const reasons: string[] = [];
       if (unselectedItems.length > 0) reasons.push(`Unassigned items: ${unselectedItems.map((i) => i.name).join(", ")}`);
@@ -491,6 +498,7 @@ export default function TablePage({
       }).catch(() => {});
     }
 
+    setSettling(true);
     try {
       const res = await fetch(BASE + "/api/ledger/compute", {
         method: "POST",
@@ -509,8 +517,11 @@ export default function TablePage({
         return;
       }
       router.push(`/t/${shareCode}/settle`);
-    } catch {
+    } catch (err) {
+      console.error("settle failed:", err);
       toast.error("Couldn't settle up, try again");
+    } finally {
+      setSettling(false);
     }
   }
 
@@ -680,6 +691,7 @@ export default function TablePage({
               tableId={table.id}
               sessionToken={session!.sessionToken}
               onUploadStarted={() => setUploadingReceipt(true)}
+              onUploadFailed={() => setUploadingReceipt(false)}
               onProcessed={refresh}
             />
             {uploadingReceipt && (
@@ -796,9 +808,8 @@ export default function TablePage({
               <ItemList
                 items={items}
                 participants={participants}
-                selections={activeSelections}
+                selections={selections}
                 session={session}
-                onSelectionsChange={setLocalSelections}
                 isEditMode={isEditing}
                 isHost={isHost}
                 canEditOthers={canEditOthers}
@@ -923,10 +934,11 @@ export default function TablePage({
           <div className="max-w-lg mx-auto">
             <button
               onClick={handleSettleClick}
-              disabled={!canSettle}
+              disabled={!canSettle || settling}
+              aria-busy={settling}
               className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Settle up →
+              {settling ? "Settling…" : "Settle up →"}
             </button>
             {!canSettle && (
               <p className="text-xs text-zinc-500 text-center mt-2">

@@ -619,7 +619,7 @@ export default function SettlePage({
       <AnimatePresenceLazy>
         {showReopenModal && (
           <ReopenConfirmModal
-            hostName={participants[0]?.displayName ?? "You"}
+            hostName={participants.find((p) => p.id === data.hostParticipantId)?.displayName ?? "You"}
             onConfirm={handleReopen}
             onCancel={() => setShowReopenModal(false)}
             loading={reopening}

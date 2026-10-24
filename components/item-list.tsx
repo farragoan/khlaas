@@ -15,7 +15,7 @@ interface ItemListProps {
   participants: PublicParticipant[];
   selections: Selection[];
   session: Session;
-  onSelectionsChange: (selections: Selection[]) => void;
+  onSelectionsChange?: (selections: Selection[]) => void;
   isEditMode?: boolean;
   isHost?: boolean;
   canEditOthers?: boolean;
@@ -98,7 +98,7 @@ export function ItemList({
         (s) => !(s.itemId === item.id && s.participantId === activeParticipantId)
       );
       setLocalSelections(next);
-      onSelectionsChange(next);
+      onSelectionsChange?.(next);
 
       pendingRef.current++;
       try {
@@ -113,20 +113,20 @@ export function ItemList({
         if (!res.ok) throw new Error("Failed");
       } catch {
         setLocalSelections(prev);
-        onSelectionsChange(prev);
+        onSelectionsChange?.(prev);
         toast.error("Couldn't update selection, try again");
       } finally {
         pendingRef.current--;
         if (pendingRef.current === 0) {
           setLocalSelections(latestExternal.current);
-          onSelectionsChange(latestExternal.current);
+          onSelectionsChange?.(latestExternal.current);
         }
       }
     } else {
       // Select: add with quantity 1
       const next = [...localSelections, { itemId: item.id, participantId: activeParticipantId, quantity: 1 }];
       setLocalSelections(next);
-      onSelectionsChange(next);
+      onSelectionsChange?.(next);
 
       pendingRef.current++;
       try {
@@ -144,13 +144,13 @@ export function ItemList({
         }
       } catch (e) {
         setLocalSelections(prev);
-        onSelectionsChange(prev);
+        onSelectionsChange?.(prev);
         toast.error(e instanceof Error ? e.message : "Couldn't update selection, try again");
       } finally {
         pendingRef.current--;
         if (pendingRef.current === 0) {
           setLocalSelections(latestExternal.current);
-          onSelectionsChange(latestExternal.current);
+          onSelectionsChange?.(latestExternal.current);
         }
       }
     }
@@ -170,7 +170,7 @@ export function ItemList({
         : s
     );
     setLocalSelections(next);
-    onSelectionsChange(next);
+    onSelectionsChange?.(next);
 
     pendingRef.current++;
     try {
@@ -188,13 +188,13 @@ export function ItemList({
       }
     } catch (e) {
       setLocalSelections(prev);
-      onSelectionsChange(prev);
+      onSelectionsChange?.(prev);
       toast.error(e instanceof Error ? e.message : "Couldn't update quantity, try again");
     } finally {
       pendingRef.current--;
       if (pendingRef.current === 0) {
         setLocalSelections(latestExternal.current);
-        onSelectionsChange(latestExternal.current);
+        onSelectionsChange?.(latestExternal.current);
       }
     }
   }

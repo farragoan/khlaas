@@ -12,6 +12,7 @@ interface ReceiptUploadProps {
   sessionToken: string;
   onProcessed: () => void;
   onUploadStarted?: () => void;
+  onUploadFailed?: () => void;
 }
 
 const IMAGE_CACHE_PREFIX = "khlaas:receipt:";
@@ -106,7 +107,7 @@ async function uploadReceipt(
   throw new Error(message);
 }
 
-export function ReceiptUpload({ tableId, sessionToken, onProcessed, onUploadStarted }: ReceiptUploadProps) {
+export function ReceiptUpload({ tableId, sessionToken, onProcessed, onUploadStarted, onUploadFailed }: ReceiptUploadProps) {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -131,6 +132,7 @@ export function ReceiptUpload({ tableId, sessionToken, onProcessed, onUploadStar
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to process receipt");
       setUploading(false);
+      onUploadFailed?.();
     } finally {
       processingRef.current = false;
     }

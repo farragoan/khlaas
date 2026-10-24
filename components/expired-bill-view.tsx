@@ -8,7 +8,7 @@ import type { Item, Payment, SplitTable } from "@/lib/db/schema";
 import type { Selection, PublicParticipant } from "@/hooks/use-table-data";
 
 interface ExpiredBillViewProps {
-  table: SplitTable;
+  table: Omit<SplitTable, "createdBy" | "rawOcr" | "receiptUrl">;
   items: Item[];
   participants: PublicParticipant[];
   selections: Selection[];
