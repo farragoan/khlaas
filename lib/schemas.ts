@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+/**
+ * Upper bound for any money value accepted from a client. The DB columns are
+ * numeric(10,2) (max 99,999,999.99), so anything near that overflows into an
+ * unhandled 500 and anything just under it wrecks the ledger. 10 million covers
+ * any real restaurant bill in any supported currency.
+ */
+export const MAX_MONEY = 10_000_000;
+
 export const CreateTableSchema = z.object({
   currency: z.string().length(3).default("INR"),
 });
@@ -38,16 +46,17 @@ export const RemoveSelectionSchema = z.object({
 
 export const ProcessReceiptSchema = z.object({
   tableId: z.string().uuid(),
-  imageBase64: z.string().min(1),
+  // ~7M base64 chars is ~5MB of image; bigger is never a phone photo we can OCR.
+  imageBase64: z.string().min(1).max(7_000_000),
 });
 
 export const PaymentSchema = z.object({
   tableId: z.string().uuid(),
   participantId: z.string().uuid(),
-  amount: z.number().nonnegative(),
+  amount: z.number().finite().nonnegative().max(MAX_MONEY),
 });
 
 export const ComputeLedgerSchema = z.object({
   tableId: z.string().uuid(),
-  tip: z.number().nonnegative().default(0),
+  tip: z.number().finite().nonnegative().max(MAX_MONEY).default(0),
 });

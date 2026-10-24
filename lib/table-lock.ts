@@ -16,3 +16,21 @@ export const EXPIRED_STATUS = 409;
 export function isExpired(status: string | null | undefined): boolean {
   return status === "expired";
 }
+
+/**
+ * A settled bill has a ledger computed from the selections and payments as they
+ * stood at settle time. Anything that moves those afterwards makes the ledger
+ * lie, so selection writes stop at settle just as they do at expiry. The host
+ * can still re-open the bill (which deletes the ledger) to change things.
+ */
+export const SETTLED_ERROR = "This bill is settled. Ask the host to re-open it to make changes";
+export const SETTLED_STATUS = 409;
+
+export function isSettled(status: string | null | undefined): boolean {
+  return status === "settled";
+}
+
+/** Whether `status` accepts selection writes (claiming / unclaiming items). */
+export function acceptsSelectionWrites(status: string | null | undefined): boolean {
+  return !isExpired(status) && !isSettled(status);
+}
