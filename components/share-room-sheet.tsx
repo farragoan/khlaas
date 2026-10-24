@@ -1,5 +1,6 @@
 "use client";
 
+import { BASE } from "@/lib/base-path";
 import { useState, useEffect, lazy, Suspense } from "react";
 import { motion } from "framer-motion";
 import { Copy, Share2, ArrowRight, Check } from "lucide-react";
@@ -24,7 +25,7 @@ export function ShareRoomSheet({ shareCode, participants, onContinue }: ShareRoo
     setOrigin(window.location.origin);
   }, []);
 
-  const roomUrl = origin ? `${origin}/t/${shareCode}` : "";
+  const roomUrl = origin ? `${origin}${BASE}/t/${shareCode}` : "";
 
   function handleCopy() {
     if (!roomUrl) return;

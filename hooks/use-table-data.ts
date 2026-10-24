@@ -1,5 +1,6 @@
 "use client";
 
+import { BASE } from "@/lib/base-path";
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { Item, Participant, SplitTable, LedgerEntry, Payment } from "@/lib/db/schema";
 
@@ -51,7 +52,7 @@ export function useTableData(shareCode: string) {
           } catch {}
         }
       }
-      const res = await fetch(`/api/tables/${shareCode}`, { headers });
+      const res = await fetch(`${BASE}/api/tables/${shareCode}`, { headers });
       if (!res.ok) {
         setError("Table not found");
         return;

@@ -1,5 +1,6 @@
 "use client";
 
+import { BASE } from "@/lib/base-path";
 import { useRef, useState } from "react";
 import { Camera, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -76,7 +77,7 @@ async function uploadReceipt(
   sessionToken: string,
   base64: string
 ): Promise<boolean> {
-  const res = await fetch("/api/receipts", {
+  const res = await fetch(BASE + "/api/receipts", {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-session-token": sessionToken },
     body: JSON.stringify({ tableId, imageBase64: base64 }),
@@ -88,7 +89,7 @@ async function uploadReceipt(
   if (res.status >= 500) {
     const cached = getCachedImage(tableId);
     if (cached && cached !== base64) {
-      const retryRes = await fetch("/api/receipts", {
+      const retryRes = await fetch(BASE + "/api/receipts", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-session-token": sessionToken },
         body: JSON.stringify({ tableId, imageBase64: cached }),

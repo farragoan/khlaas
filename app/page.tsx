@@ -1,5 +1,6 @@
 "use client";
 
+import { BASE } from "@/lib/base-path";
 import { useRouter } from "next/navigation";
 import { Camera, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -43,7 +44,7 @@ export default function Home() {
     setCreating(true);
     setStartError(null);
     try {
-      const res = await fetch("/api/tables", {
+      const res = await fetch(BASE + "/api/tables", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currency: detectCurrency() }),

@@ -1,5 +1,6 @@
 "use client";
 
+import { BASE } from "@/lib/base-path";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -65,8 +66,8 @@ export default function HistoryPage() {
   const fetchPage = useCallback(
     async (pageCursor: string | null, append: boolean) => {
       const url = pageCursor
-        ? `/api/history?cursor=${encodeURIComponent(pageCursor)}`
-        : "/api/history";
+        ? `${BASE}/api/history?cursor=${encodeURIComponent(pageCursor)}`
+        : BASE + "/api/history";
 
       const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to fetch history");

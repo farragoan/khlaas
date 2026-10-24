@@ -1,5 +1,6 @@
 "use client";
 
+import { BASE } from "@/lib/base-path";
 import { useEffect, useRef, useState } from "react";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { toast } from "sonner";
@@ -101,7 +102,7 @@ export function ItemList({
 
       pendingRef.current++;
       try {
-        const res = await fetch("/api/selections", {
+        const res = await fetch(BASE + "/api/selections", {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
@@ -129,7 +130,7 @@ export function ItemList({
 
       pendingRef.current++;
       try {
-        const res = await fetch("/api/selections", {
+        const res = await fetch(BASE + "/api/selections", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -173,7 +174,7 @@ export function ItemList({
 
     pendingRef.current++;
     try {
-      const res = await fetch("/api/selections", {
+      const res = await fetch(BASE + "/api/selections", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

@@ -1,5 +1,6 @@
 "use client";
 
+import { BASE } from "@/lib/base-path";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, X } from "lucide-react";
@@ -70,7 +71,7 @@ export function PreSettleSheet({
     try {
       await Promise.all(
         paymentEntries.map((e) =>
-          fetch("/api/payments", {
+          fetch(BASE + "/api/payments", {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-session-token": sessionToken },
             body: JSON.stringify({ tableId, participantId: e.participantId, amount: e.amount }),
@@ -80,7 +81,7 @@ export function PreSettleSheet({
         )
       );
 
-      const res = await fetch("/api/ledger/compute", {
+      const res = await fetch(BASE + "/api/ledger/compute", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-session-token": sessionToken },
         body: JSON.stringify({ tableId, tip: tipAmount }),

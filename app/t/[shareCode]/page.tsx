@@ -1,5 +1,6 @@
 "use client";
 
+import { BASE } from "@/lib/base-path";
 import { use, useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -248,7 +249,7 @@ function PaymentInput({
     debounceRef.current = setTimeout(() => {
       const amount = parseLocalizedNumber(v || "0");
       pendingRef.current++;
-      fetch("/api/payments", {
+      fetch(BASE + "/api/payments", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-session-token": sessionToken },
         body: JSON.stringify({ tableId, participantId, amount }),
@@ -374,7 +375,7 @@ export default function TablePage({
     autoJoiningRef.current = true;
     const sessionToken = nanoid(32);
     const displayName = user?.fullName ?? user?.firstName ?? "You";
-    fetch("/api/participants", {
+    fetch(BASE + "/api/participants", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tableId: data.table.id, displayName, sessionToken }),
@@ -401,7 +402,7 @@ export default function TablePage({
     const hostParticipant = data?.participants?.[0];
     const isUserHost = !!session && !!hostParticipant && hostParticipant.id === session.participantId;
     if (isUserHost) {
-      fetch("/api/user-profile")
+      fetch(BASE + "/api/user-profile")
         .then((res) => res.json())
         .then((profile) => {
           if (profile?.upiId) {
@@ -483,7 +484,7 @@ export default function TablePage({
 
     // Save UPI ID to user profile if provided (fire-and-forget, runs concurrently with compute)
     if (hostUpiId.trim()) {
-      fetch("/api/user-profile", {
+      fetch(BASE + "/api/user-profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ upiId: hostUpiId.trim() }),
@@ -491,7 +492,7 @@ export default function TablePage({
     }
 
     try {
-      const res = await fetch("/api/ledger/compute", {
+      const res = await fetch(BASE + "/api/ledger/compute", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-session-token": session.sessionToken },
         body: JSON.stringify({ tableId: table.id, tip: hostTip }),
@@ -519,12 +520,12 @@ export default function TablePage({
 
     if (hostName.trim() && session) {
       saves.push(
-        fetch("/api/user-profile", {
+        fetch(BASE + "/api/user-profile", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ displayName: hostName.trim() }),
         }),
-        fetch("/api/participants", {
+        fetch(BASE + "/api/participants", {
           method: "PATCH",
           headers: { "Content-Type": "application/json", "x-session-token": session.sessionToken },
           body: JSON.stringify({ displayName: hostName.trim(), tableId: table.id }),
@@ -537,7 +538,7 @@ export default function TablePage({
     if (paymentMode && paymentMode !== table.paymentMode) updates.paymentMode = paymentMode;
     if (Object.keys(updates).length > 0) {
       saves.push(
-        fetch(`/api/tables/${shareCode}`, {
+        fetch(`${BASE}/api/tables/${shareCode}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json", "x-session-token": session?.sessionToken ?? "" },
           body: JSON.stringify(updates),
@@ -822,7 +823,7 @@ export default function TablePage({
                         if (!next) {
                           // Clear discount — save null to table
                           setDiscountTotalInput("");
-                          fetch(`/api/tables/${shareCode}`, {
+                          fetch(`${BASE}/api/tables/${shareCode}`, {
                             method: "PATCH",
                             headers: { "Content-Type": "application/json", "x-session-token": session?.sessionToken ?? "" },
                             body: JSON.stringify({ actualPaidTotal: null }),
@@ -862,7 +863,7 @@ export default function TablePage({
                               setDiscountTotalInput(e.target.value);
                               const v = parseLocalizedNumber(e.target.value || "0");
                               if (v > 0 && v <= billTotal) {
-                                fetch(`/api/tables/${shareCode}`, {
+                                fetch(`${BASE}/api/tables/${shareCode}`, {
                                   method: "PATCH",
                                   headers: { "Content-Type": "application/json", "x-session-token": session?.sessionToken ?? "" },
                                   body: JSON.stringify({ actualPaidTotal: v }),
@@ -978,7 +979,7 @@ export default function TablePage({
                   onClick={async () => {
                     if (!session) return;
                     try {
-                      const res = await fetch("/api/participants", {
+                      const res = await fetch(BASE + "/api/participants", {
                         method: "PATCH",
                         headers: {
                           "Content-Type": "application/json",

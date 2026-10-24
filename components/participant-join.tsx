@@ -1,5 +1,6 @@
 "use client";
 
+import { BASE } from "@/lib/base-path";
 import { useState } from "react";
 import { nanoid } from "nanoid";
 import { motion } from "framer-motion";
@@ -31,7 +32,7 @@ export function ParticipantJoin({ tableId, onJoined }: ParticipantJoinProps) {
     const sessionToken = nanoid(32);
 
     try {
-      const res = await fetch("/api/participants", {
+      const res = await fetch(BASE + "/api/participants", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tableId, displayName: trimmed, sessionToken }),
@@ -42,7 +43,7 @@ export function ParticipantJoin({ tableId, onJoined }: ParticipantJoinProps) {
       const { participantId } = await res.json();
 
       if (isSignedIn) {
-        fetch("/api/user-profile", {
+        fetch(BASE + "/api/user-profile", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ displayName: trimmed }),

@@ -1,5 +1,6 @@
 "use client";
 
+import { BASE } from "@/lib/base-path";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth, SignInButton } from "@clerk/nextjs";
@@ -81,7 +82,7 @@ export default function AdminPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/admin/health");
+      const res = await fetch(BASE + "/api/admin/health");
       const json = await res.json();
       if (res.status === 403) {
         setForbidden(json as ForbiddenResponse);

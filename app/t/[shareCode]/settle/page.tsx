@@ -1,5 +1,6 @@
 "use client";
 
+import { BASE } from "@/lib/base-path";
 import { use, useEffect, useState, lazy } from "react";
 import { useRouter } from "next/navigation";
 import { Share2, ChevronLeft, RotateCcw, AlertTriangle, Smartphone } from "lucide-react";
@@ -387,7 +388,7 @@ export default function SettlePage({
     if (!upiInput.trim() || !session) return;
     setSavingUpi(true);
     try {
-      const res = await fetch("/api/user-profile", {
+      const res = await fetch(BASE + "/api/user-profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ upiId: upiInput.trim() }),
@@ -409,7 +410,7 @@ export default function SettlePage({
     if (!session) return;
     setReopening(true);
     try {
-      const res = await fetch(`/api/tables/${shareCode}/reopen`, {
+      const res = await fetch(`${BASE}/api/tables/${shareCode}/reopen`, {
         method: "POST",
         headers: { "x-session-token": session.sessionToken },
       });
