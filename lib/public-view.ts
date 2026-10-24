@@ -44,3 +44,17 @@ export function publicParticipant(
     upiId: showUpi ? upiId : null,
   };
 }
+
+/**
+ * The host's participant id, for display ("hosted by"). The host is the table
+ * creator's row; legacy tables with no creator fall back to the earliest joiner.
+ * This is an id only, so it exposes nothing the roster does not already show.
+ */
+export function findHostId(
+  createdBy: string | null | undefined,
+  rows: { id: string; userId: string | null; joinedAt: Date | null }[]
+): string | null {
+  if (createdBy) return rows.find((r) => r.userId === createdBy)?.id ?? null;
+  const sorted = [...rows].sort((a, b) => (a.joinedAt?.getTime() ?? 0) - (b.joinedAt?.getTime() ?? 0));
+  return sorted[0]?.id ?? null;
+}

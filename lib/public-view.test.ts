@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { publicParticipant, publicTable } from "./public-view";
+import { publicParticipant, publicTable, findHostId } from "./public-view";
 import type { SplitTable } from "@/lib/db/schema";
 
 const row = {
@@ -32,5 +32,19 @@ describe("publicTable", () => {
     const t = { id: "t", shareCode: "x", status: "active", createdBy: "u", rawOcr: "{}", receiptUrl: "http://r" } as unknown as SplitTable;
     const out = publicTable(t) as Record<string, unknown>;
     expect(out).toEqual({ id: "t", shareCode: "x", status: "active" });
+  });
+});
+
+describe("findHostId", () => {
+  const rows = [
+    { id: "late-creator", userId: "u1", joinedAt: new Date(2) },
+    { id: "early-guest", userId: null, joinedAt: new Date(1) },
+  ];
+  it("prefers the creator over the earliest joiner", () => {
+    expect(findHostId("u1", rows)).toBe("late-creator");
+  });
+  it("is null when the creator has not joined, earliest joiner for legacy tables", () => {
+    expect(findHostId("u9", rows)).toBeNull();
+    expect(findHostId(null, rows)).toBe("early-guest");
   });
 });

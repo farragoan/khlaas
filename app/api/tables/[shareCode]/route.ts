@@ -3,7 +3,7 @@ import { db } from "@/lib/db/client";
 import { splitTables, items, participants, selections, ledgerEntries, payments } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { verifyHost, hashToken } from "@/lib/auth";
-import { publicTable, publicParticipant } from "@/lib/public-view";
+import { publicTable, publicParticipant, findHostId } from "@/lib/public-view";
 import { auth } from "@clerk/nextjs/server";
 import { MAX_MONEY } from "@/lib/schemas";
 import { EXPIRED_ERROR, EXPIRED_STATUS, isExpired } from "@/lib/table-lock";
@@ -74,6 +74,7 @@ export async function GET(
     payments: tablePayments,
     ledger: tableLedger,
     isHost: !!hostParticipant,
+    hostParticipantId: findHostId(table.createdBy, rawParticipants),
   });
 
   // Per-viewer fields (isHost, own userId, visible upiIds) mean this response
