@@ -3,6 +3,8 @@ import { Geist } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "@/components/ui/sonner";
 import { BASE } from "@/lib/base-path";
+import { PwaRegister } from "@/components/pwa-register";
+import { InstallPrompt } from "@/components/install-prompt";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -20,8 +22,11 @@ export const metadata: Metadata = {
     title: "खल्लास",
   },
   icons: {
-    apple: `${BASE}/icons/icon-192.svg`,
-    icon: `${BASE}/icons/icon-512.svg`,
+    apple: [{ url: `${BASE}/icons/apple-touch-icon.png`, sizes: "180x180", type: "image/png" }],
+    icon: [
+      { url: `${BASE}/icons/icon-192.png`, sizes: "192x192", type: "image/png" },
+      { url: `${BASE}/icons/icon-512.svg`, type: "image/svg+xml" },
+    ],
   },
 };
 
@@ -29,6 +34,7 @@ export const viewport: Viewport = {
   themeColor: "#0F0F0F",
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -41,6 +47,8 @@ export default function RootLayout({
       <html lang="en" className={`${geistSans.variable} h-full`}>
         <body className="antialiased">
           {children}
+          <PwaRegister />
+          <InstallPrompt />
           <Toaster position="bottom-center" theme="dark" />
         </body>
       </html>
