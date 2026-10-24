@@ -13,6 +13,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   basePath: process.env.NEXT_PUBLIC_BASE_PATH || "",
+  skipTrailingSlashRedirect: true,
   async headers() {
     return [
       {
