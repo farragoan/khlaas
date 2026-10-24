@@ -165,7 +165,7 @@ export function ReceiptUpload({ tableId, sessionToken, onProcessed, onUploadStar
         <Button
           onClick={() => cameraInputRef.current?.click()}
           disabled={uploading}
-          className="flex-1 h-14 bg-[var(--brand)] hover:bg-amber-300 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2"
+          className="flex-1 h-14 bg-[var(--brand)] hover:bg-brand/90 text-on-brand font-semibold text-base rounded-2xl flex items-center justify-center gap-2"
         >
           <Camera size={20} />
           {uploading ? "Processing…" : "Take photo"}
@@ -173,7 +173,7 @@ export function ReceiptUpload({ tableId, sessionToken, onProcessed, onUploadStar
         <Button
           onClick={() => galleryInputRef.current?.click()}
           disabled={uploading}
-          className="flex-1 h-14 bg-[var(--surface-raised)] hover:bg-zinc-700 text-white font-semibold text-base rounded-2xl flex items-center justify-center gap-2 border border-zinc-700"
+          className="flex-1 h-14 bg-[var(--surface-raised)] hover:bg-surface-strong text-foreground font-semibold text-base rounded-2xl flex items-center justify-center gap-2 border border-border"
         >
           <Image size={20} />
           {uploading ? "Processing…" : "Choose photo"}

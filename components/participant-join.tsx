@@ -60,7 +60,7 @@ export function ParticipantJoin({ tableId, onJoined }: ParticipantJoinProps) {
 
   if (isSignedIn) {
     return (
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-scrim/70 backdrop-blur-sm p-4">
         <motion.div
           initial={{ y: 40, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -68,8 +68,8 @@ export function ParticipantJoin({ tableId, onJoined }: ParticipantJoinProps) {
           className="w-full max-w-sm bg-[var(--surface)] rounded-2xl p-6 space-y-5"
         >
           <div>
-            <h2 className="text-xl font-semibold text-white">Join the table</h2>
-            <p className="text-sm text-zinc-400 mt-1">
+            <h2 className="text-xl font-semibold text-foreground">Join the table</h2>
+            <p className="text-sm text-muted mt-1">
               Joining as {displayName}
             </p>
           </div>
@@ -79,7 +79,7 @@ export function ParticipantJoin({ tableId, onJoined }: ParticipantJoinProps) {
           <Button
             onClick={handleJoin}
             disabled={loading}
-            className="w-full h-12 bg-[var(--brand)] hover:bg-amber-300 text-black font-semibold rounded-xl"
+            className="w-full h-12 bg-[var(--brand)] hover:bg-brand/90 text-on-brand font-semibold rounded-xl"
           >
             {loading ? "Joining…" : `Join as ${displayName}`}
           </Button>
@@ -89,7 +89,7 @@ export function ParticipantJoin({ tableId, onJoined }: ParticipantJoinProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-scrim/70 backdrop-blur-sm p-4">
       <motion.div
         initial={{ y: 40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -101,13 +101,13 @@ export function ParticipantJoin({ tableId, onJoined }: ParticipantJoinProps) {
         <GoogleOneTap />
 
         <div>
-          <h2 className="text-xl font-semibold text-white">Join the table</h2>
-          <p className="text-sm text-zinc-400 mt-1">Sign in to join this table</p>
+          <h2 className="text-xl font-semibold text-foreground">Join the table</h2>
+          <p className="text-sm text-muted mt-1">Sign in to join this table</p>
         </div>
 
         <Button
           onClick={() => openSignIn(AUTH_MODAL_PROPS)}
-          className="w-full h-12 bg-[var(--brand)] hover:bg-amber-300 text-black font-semibold rounded-xl"
+          className="w-full h-12 bg-[var(--brand)] hover:bg-brand/90 text-on-brand font-semibold rounded-xl"
         >
           Continue with Google
         </Button>

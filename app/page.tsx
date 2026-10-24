@@ -71,7 +71,7 @@ export default function Home() {
           <>
             <Link
               href="/history"
-              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-600 flex items-center gap-1.5"
+              className="text-xs text-muted hover:text-foreground transition-colors px-3 py-1.5 rounded-lg border border-surface-raised hover:border-border flex items-center gap-1.5"
             >
               <History size={14} />
               History
@@ -80,7 +80,7 @@ export default function Home() {
           </>
         ) : (
           <SignInButton mode="modal" {...AUTH_MODAL_PROPS}>
-            <button className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-600">
+            <button className="text-xs text-muted hover:text-foreground transition-colors px-3 py-1.5 rounded-lg border border-surface-raised hover:border-border">
               Continue
             </button>
           </SignInButton>
@@ -95,7 +95,7 @@ export default function Home() {
       >
         <div>
           <h1 className="text-5xl font-bold tracking-tight text-[var(--brand)]">खल्लास</h1>
-          <p className="text-zinc-400 text-sm mt-2">Split bills, not friendships</p>
+          <p className="text-muted text-sm mt-2">Split bills, not friendships</p>
         </div>
 
         <div className="w-full">
@@ -115,8 +115,8 @@ export default function Home() {
           </button>
         </div>
 
-        {startError && <p className="text-sm text-red-400">{startError}</p>}
-        <p className="text-xs text-zinc-600">Free account needed · Works on any phone</p>
+        {startError && <p className="text-sm text-danger">{startError}</p>}
+        <p className="text-xs text-muted">Free account needed · Works on any phone</p>
         <ThemeToggle />
       </motion.div>
     </main>

@@ -51,7 +51,7 @@ export function ShareRoomSheet({ shareCode, participants, onContinue }: ShareRoo
       transition={{ duration: 0.5, ease: "easeOut" }}
       className="flex flex-col items-center text-center pt-6 pb-4"
     >
-      <p className="text-zinc-400 text-sm mb-6">Invite everyone before you start tapping</p>
+      <p className="text-muted text-sm mb-6">Invite everyone before you start tapping</p>
 
       {/* QR Code */}
       {roomUrl && (
@@ -59,9 +59,9 @@ export function ShareRoomSheet({ shareCode, participants, onContinue }: ShareRoo
           initial={{ scale: 0.92, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.1, duration: 0.4 }}
-          className="rounded-2xl overflow-hidden mb-5 p-3 bg-[#0F0F0F] border border-zinc-800"
+          className="rounded-2xl overflow-hidden mb-5 p-3 bg-background border border-surface-raised"
         >
-          <Suspense fallback={<div className="w-[200px] h-[200px] bg-zinc-800 rounded" />}>
+          <Suspense fallback={<div className="w-[200px] h-[200px] bg-surface-raised rounded" />}>
             <QRCodeSVG
               value={roomUrl}
               size={200}
@@ -74,21 +74,21 @@ export function ShareRoomSheet({ shareCode, participants, onContinue }: ShareRoo
       )}
 
       {/* Room code */}
-      <p className="text-zinc-500 text-xs uppercase tracking-widest mb-1">Room code</p>
-      <p className="text-white font-mono text-2xl font-bold tracking-wider mb-6">{shareCode}</p>
+      <p className="text-muted text-xs uppercase tracking-widest mb-1">Room code</p>
+      <p className="text-foreground font-mono text-2xl font-bold tracking-wider mb-6">{shareCode}</p>
 
       {/* Copy / Share buttons */}
       <div className="flex gap-3 w-full mb-6">
         <button
           onClick={handleCopy}
-          className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl bg-[var(--surface)] text-zinc-300 text-sm font-medium hover:bg-zinc-700 active:scale-95 transition-all"
+          className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl bg-[var(--surface)] text-foreground text-sm font-medium hover:bg-surface-strong active:scale-95 transition-all"
         >
-          {copied ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
+          {copied ? <Check size={16} className="text-success" /> : <Copy size={16} />}
           {copied ? "Copied!" : "Copy link"}
         </button>
         <button
           onClick={handleShare}
-          className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl bg-[var(--surface)] text-zinc-300 text-sm font-medium hover:bg-zinc-700 active:scale-95 transition-all"
+          className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl bg-[var(--surface)] text-foreground text-sm font-medium hover:bg-surface-strong active:scale-95 transition-all"
         >
           <Share2 size={16} />
           Share
@@ -97,7 +97,7 @@ export function ShareRoomSheet({ shareCode, participants, onContinue }: ShareRoo
 
       {/* Live participant dots */}
       <div className="mb-8">
-        <p className="text-zinc-500 text-xs mb-3">Waiting for others…</p>
+        <p className="text-muted text-xs mb-3">Waiting for others…</p>
         <div className="flex items-center gap-2 justify-center flex-wrap">
           {participants.map((p) => (
             <motion.div
@@ -107,10 +107,10 @@ export function ShareRoomSheet({ shareCode, participants, onContinue }: ShareRoo
               transition={{ type: "spring", damping: 14 }}
               className="flex flex-col items-center gap-1"
             >
-              <div className="w-9 h-9 rounded-full bg-[var(--brand)] flex items-center justify-center text-sm font-bold text-black">
+              <div className="w-9 h-9 rounded-full bg-[var(--brand)] flex items-center justify-center text-sm font-bold text-on-brand">
                 {p.displayName[0].toUpperCase()}
               </div>
-              <span className="text-zinc-400 text-[10px] max-w-[48px] truncate">{p.displayName}</span>
+              <span className="text-muted text-[10px] max-w-[48px] truncate">{p.displayName}</span>
             </motion.div>
           ))}
         </div>
@@ -119,7 +119,7 @@ export function ShareRoomSheet({ shareCode, participants, onContinue }: ShareRoo
       {/* Continue button */}
       <button
         onClick={onContinue}
-        className="w-full h-14 flex items-center justify-center gap-2 rounded-2xl bg-[var(--brand)] text-black font-semibold text-base active:scale-95 transition-all hover:bg-amber-300"
+        className="w-full h-14 flex items-center justify-center gap-2 rounded-2xl bg-[var(--brand)] text-on-brand font-semibold text-base active:scale-95 transition-all hover:bg-brand/90"
       >
         Continue to bill
         <ArrowRight size={18} />

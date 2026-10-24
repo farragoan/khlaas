@@ -25,7 +25,7 @@ export function ThemeToggle() {
               {t.swatches.map((c) => (
                 <span
                   key={c}
-                  className="size-4 rounded-full border border-white/20"
+                  className="size-4 rounded-full border border-foreground/20"
                   style={{ background: c }}
                 />
               ))}

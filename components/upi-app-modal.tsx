@@ -68,7 +68,7 @@ export function UpiAppModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 z-50"
+            className="fixed inset-0 bg-scrim/60 z-50"
             onClick={onClose}
           />
           <motion.div
@@ -76,14 +76,14 @@ export function UpiAppModal({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 28, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-[#1A1A1A] rounded-t-2xl px-4 pt-5 pb-10 max-w-lg mx-auto"
+            className="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-2xl px-4 pt-5 pb-10 max-w-lg mx-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold text-white">Pay with</h2>
+              <h2 className="text-lg font-bold text-foreground">Pay with</h2>
               <button
                 onClick={onClose}
-                className="text-zinc-500 hover:text-zinc-300 transition-colors"
+                className="text-muted hover:text-foreground transition-colors"
               >
                 <X size={20} />
               </button>
@@ -102,8 +102,8 @@ export function UpiAppModal({
                     {app.icon}
                   </div>
                   <div>
-                    <span className="text-white font-medium">{app.name}</span>
-                    <p className="text-xs text-zinc-500">
+                    <span className="text-foreground font-medium">{app.name}</span>
+                    <p className="text-xs text-muted">
                       Pay {getCurrencySymbol(currency)}{amount.toFixed(2)} to {name}
                     </p>
                   </div>

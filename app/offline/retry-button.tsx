@@ -5,7 +5,7 @@ export function OfflineRetry() {
     <button
       type="button"
       onClick={() => window.location.reload()}
-      className="min-h-11 rounded-xl bg-amber-400 px-6 font-medium text-black"
+      className="min-h-11 rounded-xl bg-brand px-6 font-medium text-on-brand"
     >
       Retry
     </button>

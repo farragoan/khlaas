@@ -16,23 +16,23 @@ const STATUS_CONFIG: Record<
 > = {
   active: {
     label: "Open",
-    className: "bg-zinc-800 text-zinc-300",
+    className: "bg-surface-raised text-foreground",
   },
   items_ready: {
     label: "Selecting",
-    className: "bg-amber-900/30 text-amber-400",
+    className: "bg-warning/15 text-warning",
   },
   editing: {
     label: "Editing",
-    className: "bg-amber-900/30 text-amber-400",
+    className: "bg-warning/15 text-warning",
   },
   settled: {
     label: "Settled",
-    className: "bg-emerald-900/30 text-emerald-400",
+    className: "bg-success/15 text-success",
   },
   expired: {
     label: "Expired",
-    className: "bg-red-900/30 text-red-400",
+    className: "bg-danger/15 text-danger",
   },
 };
 
@@ -99,24 +99,24 @@ export default function HistoryPage() {
 
   if (!isLoaded) {
     return (
-      <div className="flex items-center justify-center min-h-dvh bg-[#0F0F0F]">
-        <Loader2 className="animate-spin text-zinc-600" size={32} />
+      <div className="flex items-center justify-center min-h-dvh bg-background">
+        <Loader2 className="animate-spin text-muted" size={32} />
       </div>
     );
   }
 
   if (!isSignedIn) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-dvh bg-[#0F0F0F] px-6 text-center gap-6">
-        <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center">
-          <Clock size={28} className="text-zinc-400" />
+      <div className="flex flex-col items-center justify-center min-h-dvh bg-background px-6 text-center gap-6">
+        <div className="w-16 h-16 rounded-full bg-surface-raised flex items-center justify-center">
+          <Clock size={28} className="text-muted" />
         </div>
         <div className="space-y-2">
-          <h1 className="text-white font-semibold text-lg">Sign in to see your bill history</h1>
-          <p className="text-zinc-500 text-sm">Your past bills appear here once you&apos;re signed in.</p>
+          <h1 className="text-foreground font-semibold text-lg">Sign in to see your bill history</h1>
+          <p className="text-muted text-sm">Your past bills appear here once you&apos;re signed in.</p>
         </div>
         <SignInButton mode="modal" {...AUTH_MODAL_PROPS}>
-          <button className="px-6 py-3 bg-[var(--brand)] text-black font-semibold rounded-2xl text-sm">
+          <button className="px-6 py-3 bg-[var(--brand)] text-on-brand font-semibold rounded-2xl text-sm">
             Continue with Google
           </button>
         </SignInButton>
@@ -125,7 +125,7 @@ export default function HistoryPage() {
   }
 
   return (
-    <main className="min-h-dvh bg-[#0F0F0F] flex flex-col max-w-lg mx-auto px-4">
+    <main className="min-h-dvh bg-background flex flex-col max-w-lg mx-auto px-4">
       {/* Header */}
       <div className="flex items-center gap-3 py-5">
         <button
@@ -136,21 +136,21 @@ export default function HistoryPage() {
               router.push("/");
             }
           }}
-          className="text-zinc-400 hover:text-zinc-200 transition-colors"
+          className="text-muted hover:text-foreground transition-colors"
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-white font-semibold text-lg">Bill History</h1>
+        <h1 className="text-foreground font-semibold text-lg">Bill History</h1>
       </div>
 
       {/* Content */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="animate-spin text-zinc-600" size={28} />
+          <Loader2 className="animate-spin text-muted" size={28} />
         </div>
       ) : error ? (
         <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
-          <p className="text-red-400 text-sm">{error}</p>
+          <p className="text-danger text-sm">{error}</p>
           <button
             onClick={() => {
               setError(null);
@@ -159,25 +159,25 @@ export default function HistoryPage() {
                 .catch(() => setError("Couldn't load your bills."))
                 .finally(() => setLoading(false));
             }}
-            className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+            className="text-sm text-muted hover:text-foreground transition-colors"
           >
             Try again
           </button>
         </div>
       ) : bills.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center">
-            <Camera size={28} className="text-zinc-400" />
+          <div className="w-16 h-16 rounded-full bg-surface-raised flex items-center justify-center">
+            <Camera size={28} className="text-muted" />
           </div>
           <div className="space-y-1">
-            <h2 className="text-white font-semibold text-lg">No bills yet</h2>
-            <p className="text-zinc-500 text-sm">
+            <h2 className="text-foreground font-semibold text-lg">No bills yet</h2>
+            <p className="text-muted text-sm">
               Scan your first receipt to get started.
             </p>
           </div>
           <Link
             href="/"
-            className="mt-2 px-6 py-3 bg-[var(--brand)] text-black font-semibold rounded-2xl text-sm"
+            className="mt-2 px-6 py-3 bg-[var(--brand)] text-on-brand font-semibold rounded-2xl text-sm"
           >
             Scan a bill
           </Link>
@@ -190,7 +190,7 @@ export default function HistoryPage() {
               <Link
                 key={bill.shareCode}
                 href={`/t/${bill.shareCode}`}
-                className="block bg-[var(--surface)] rounded-2xl px-4 py-4 hover:bg-zinc-800/60 active:scale-[0.98] transition-transform transition-colors"
+                className="block bg-[var(--surface)] rounded-2xl px-4 py-4 hover:bg-surface-raised/60 active:scale-[0.98] transition-transform transition-colors"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
@@ -201,25 +201,25 @@ export default function HistoryPage() {
                         {statusConfig.label}
                       </span>
                       {bill.role === "creator" && (
-                        <span className="text-xs text-zinc-600">Created</span>
+                        <span className="text-xs text-muted">Created</span>
                       )}
                       {bill.role === "both" && (
-                        <span className="text-xs text-zinc-600">Created</span>
+                        <span className="text-xs text-muted">Created</span>
                       )}
                     </div>
-                    <p className="text-sm text-zinc-400">
+                    <p className="text-sm text-muted">
                       {formatDate(bill.createdAt)}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-white font-semibold text-sm">
+                    <p className="text-foreground font-semibold text-sm">
                       {getCurrencySymbol(bill.currency)}
                       {bill.billTotal.toFixed(2)}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 mt-3 text-xs text-zinc-500">
+                <div className="flex items-center gap-3 mt-3 text-xs text-muted">
                   <span className="flex items-center gap-1">
                     <Users size={12} />
                     {bill.participantCount} {bill.participantCount === 1 ? "person" : "people"}
@@ -228,7 +228,7 @@ export default function HistoryPage() {
                     {bill.itemCount} {bill.itemCount === 1 ? "item" : "items"}
                   </span>
                   {bill.myDisplayName && (
-                    <span className="text-zinc-600">
+                    <span className="text-muted">
                       as {bill.myDisplayName}
                     </span>
                   )}
@@ -242,7 +242,7 @@ export default function HistoryPage() {
               <button
                 onClick={handleLoadMore}
                 disabled={loadingMore}
-                className="px-6 py-2.5 text-sm text-zinc-400 hover:text-zinc-200 border border-zinc-800 hover:border-zinc-600 rounded-xl transition-all disabled:opacity-50"
+                className="px-6 py-2.5 text-sm text-muted hover:text-foreground border border-surface-raised hover:border-border rounded-xl transition-all disabled:opacity-50"
               >
                 {loadingMore ? (
                   <Loader2 size={16} className="animate-spin" />

@@ -79,30 +79,30 @@ function HostProcessingPanel({
       transition={{ type: "spring", damping: 24, stiffness: 260 }}
       className="mt-6 space-y-5"
     >
-      <p className="text-zinc-400 text-sm text-center animate-pulse">
+      <p className="text-muted text-sm text-center animate-pulse">
         Processing your receipt in the background…
       </p>
 
       {/* Your name */}
       <div className="bg-[var(--surface)] rounded-2xl px-4 py-4 space-y-3">
-        <p className="text-sm font-medium text-zinc-200">Your name</p>
+        <p className="text-sm font-medium text-foreground">Your name</p>
         <input
           type="text"
           value={hostName}
           onChange={(e) => onHostNameChange(e.target.value)}
           maxLength={50}
-          className="w-full bg-[var(--surface-raised)] text-white placeholder-zinc-500 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--brand)]"
+          className="w-full bg-[var(--surface-raised)] text-foreground placeholder-muted rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--brand)]"
         />
       </div>
 
       {/* Currency selector */}
       <div className="bg-[var(--surface)] rounded-2xl px-4 py-4 space-y-3">
-        <p className="text-sm font-medium text-zinc-200">Currency</p>
+        <p className="text-sm font-medium text-foreground">Currency</p>
         <div className="relative">
           <select
             value={currency}
             onChange={(e) => onCurrencyChange(e.target.value)}
-            className="w-full appearance-none bg-[var(--surface-raised)] text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--brand)] pr-10"
+            className="w-full appearance-none bg-[var(--surface-raised)] text-foreground rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--brand)] pr-10"
           >
             {CURRENCIES.map((c) => (
               <option key={c.code} value={c.code}>
@@ -110,27 +110,27 @@ function HostProcessingPanel({
               </option>
             ))}
           </select>
-          <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+          <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
         </div>
       </div>
 
       {/* UPI ID */}
       <div className="bg-[var(--surface)] rounded-2xl px-4 py-4 space-y-3">
-        <p className="text-sm font-medium text-zinc-200">Your UPI ID</p>
+        <p className="text-sm font-medium text-foreground">Your UPI ID</p>
         <input
           type="text"
           value={upiId}
           onChange={(e) => onUpiIdChange(e.target.value)}
           placeholder="name@bank (e.g. rahul@okaxis)"
           maxLength={50}
-          className="w-full bg-[var(--surface-raised)] text-white placeholder-zinc-500 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--brand)]"
+          className="w-full bg-[var(--surface-raised)] text-foreground placeholder-muted rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--brand)]"
         />
-        <p className="text-xs text-zinc-500">Others will share their bills to this UPI ID</p>
+        <p className="text-xs text-muted">Others will share their bills to this UPI ID</p>
       </div>
 
       {/* Who paid */}
       <div className="bg-[var(--surface)] rounded-2xl px-4 py-4 space-y-3">
-        <p className="text-sm font-medium text-zinc-200">Who paid?</p>
+        <p className="text-sm font-medium text-foreground">Who paid?</p>
         <div className="space-y-2">
           {(["host", "split"] as const).map((mode) => {
             const label = mode === "host" ? "I paid everything" : "We split the bill";
@@ -144,12 +144,12 @@ function HostProcessingPanel({
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-sm font-medium text-left ${
                   selected
                     ? "border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--brand)]"
-                    : "border-zinc-800 text-zinc-400 hover:border-zinc-600"
+                    : "border-surface-raised text-muted hover:border-border"
                 }`}
               >
                 <span
                   className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
-                    selected ? "border-[var(--brand)]" : "border-zinc-600"
+                    selected ? "border-[var(--brand)]" : "border-border"
                   }`}
                 >
                   {selected && <span className="w-2 h-2 rounded-full bg-[var(--brand)]" />}
@@ -163,7 +163,7 @@ function HostProcessingPanel({
 
       {/* Tip */}
       <div className="bg-[var(--surface)] rounded-2xl px-4 py-4 space-y-3">
-        <p className="text-sm font-medium text-zinc-200">Add a tip?</p>
+        <p className="text-sm font-medium text-foreground">Add a tip?</p>
         <div className="flex gap-2">
           {([false, true] as const).map((v) => (
             <button
@@ -172,7 +172,7 @@ function HostProcessingPanel({
               className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all ${
                 wantTip === v
                   ? "border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--brand)]"
-                  : "border-zinc-800 text-zinc-400 hover:border-zinc-600"
+                  : "border-surface-raised text-muted hover:border-border"
               }`}
             >
               {v ? "Yes" : "No"}
@@ -188,14 +188,14 @@ function HostProcessingPanel({
               className="overflow-hidden"
             >
               <div className="flex items-center gap-2 bg-[var(--surface-raised)] rounded-xl px-4 py-2.5 mt-1">
-                <span className="text-zinc-400 text-sm">{currencySymbol}</span>
+                <span className="text-muted text-sm">{currencySymbol}</span>
                 <input
                   type="text"
                   inputMode="decimal"
                   placeholder="0"
                   value={tipInput}
                   onChange={(e) => onTipInputChange(e.target.value)}
-                  className="flex-1 bg-transparent text-zinc-100 text-sm outline-none"
+                  className="flex-1 bg-transparent text-foreground text-sm outline-none"
                   autoFocus
                 />
               </div>
@@ -208,12 +208,12 @@ function HostProcessingPanel({
       <button
         onClick={onContinue}
         disabled={!canContinue}
-        className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+        className="w-full h-14 bg-[var(--brand)] hover:bg-brand/90 active:scale-95 text-on-brand font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
       >
         Continue
       </button>
       {!canContinue && (
-        <p className="text-xs text-zinc-500 text-center">Choose who&apos;s paying to continue</p>
+        <p className="text-xs text-muted text-center">Choose who&apos;s paying to continue</p>
       )}
     </motion.div>
   );
@@ -261,14 +261,14 @@ function PaymentInput({
 
   return (
     <div className="flex items-center gap-1 bg-[var(--surface-raised)] rounded-xl px-3 py-3">
-      <span className="text-zinc-400 text-sm">{currencySymbol}</span>
+      <span className="text-muted text-sm">{currencySymbol}</span>
       <input
         type="text"
         inputMode="decimal"
         placeholder="0"
         value={value}
         onChange={(e) => handleChange(e.target.value)}
-        className="w-24 bg-transparent text-zinc-100 text-sm text-right outline-none"
+        className="w-24 bg-transparent text-foreground text-sm text-right outline-none"
       />
     </div>
   );
@@ -427,18 +427,18 @@ export default function TablePage({
 
   if (error || !data) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-dvh bg-[#0F0F0F] px-6 text-center gap-4">
-        <p className="text-zinc-400">Table not found</p>
+      <div className="flex flex-col items-center justify-center min-h-dvh bg-background px-6 text-center gap-4">
+        <p className="text-muted">Table not found</p>
         <div className="flex gap-3">
           <button
             onClick={() => refresh()}
-            className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+            className="text-sm text-muted hover:text-foreground transition-colors"
           >
             Try again
           </button>
           <Link
             href="/"
-            className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+            className="text-sm text-muted hover:text-foreground transition-colors"
           >
             Go home
           </Link>
@@ -589,13 +589,13 @@ export default function TablePage({
 
   return (
     <CurrencyProvider value={currency}>
-    <main className="min-h-dvh bg-[#0F0F0F] flex flex-col max-w-lg mx-auto px-4" style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom, 0px))" }}>
+    <main className="min-h-dvh bg-background flex flex-col max-w-lg mx-auto px-4" style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom, 0px))" }}>
       {/* Header */}
       <div className="flex items-center justify-between py-5">
         <h1 className="text-[var(--brand)] font-bold text-xl">खल्लास</h1>
         <button
           onClick={handleShare}
-          className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+          className="flex items-center gap-1.5 text-sm text-muted hover:text-foreground transition-colors"
         >
           <Share2 size={16} />
           Share
@@ -606,9 +606,9 @@ export default function TablePage({
       {participants.length > 0 && (
         <button
           onClick={() => setShowParticipantsList(true)}
-          className="flex items-center gap-2 mb-5 px-3 py-1.5 rounded-full bg-[var(--surface-raised)] text-zinc-300 text-xs font-medium w-fit active:scale-95 transition-transform"
+          className="flex items-center gap-2 mb-5 px-3 py-1.5 rounded-full bg-[var(--surface-raised)] text-foreground text-xs font-medium w-fit active:scale-95 transition-transform"
         >
-          <Users size={14} className="text-zinc-500" />
+          <Users size={14} className="text-muted" />
           {participants.length === 1
             ? "1 person in this bill"
             : `${participants.length} people in this bill`}
@@ -622,7 +622,7 @@ export default function TablePage({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 z-50 flex items-end justify-center"
+            className="fixed inset-0 bg-scrim/60 z-50 flex items-end justify-center"
             onClick={() => setShowParticipantsList(false)}
           >
             <motion.div
@@ -631,13 +631,13 @@ export default function TablePage({
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg bg-[#1A1A1A] rounded-t-2xl px-4 pt-5 pb-10"
+              className="w-full max-w-lg bg-surface rounded-t-2xl px-4 pt-5 pb-10"
             >
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-white font-semibold">Participants</h2>
+                <h2 className="text-foreground font-semibold">Participants</h2>
                 <button
                   onClick={() => setShowParticipantsList(false)}
-                  className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-500 hover:text-zinc-300 transition-colors"
+                  className="w-10 h-10 flex items-center justify-center rounded-full text-muted hover:text-foreground transition-colors"
                 >
                   <X size={20} />
                 </button>
@@ -648,22 +648,22 @@ export default function TablePage({
                     key={p.id}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl ${
                       p.id === session?.participantId
-                        ? "bg-[var(--brand)] text-black font-medium"
-                        : "bg-[var(--surface)] text-zinc-200"
+                        ? "bg-[var(--brand)] text-on-brand font-medium"
+                        : "bg-[var(--surface)] text-foreground"
                     }`}
                   >
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
                         p.id === session?.participantId
-                          ? "bg-black/20 text-black"
-                          : "bg-zinc-700 text-zinc-200"
+                          ? "bg-on-brand/20 text-on-brand"
+                          : "bg-surface-strong text-foreground"
                       }`}
                     >
                       {p.displayName[0].toUpperCase()}
                     </div>
                     <span className="flex-1 text-sm">{p.displayName}</span>
                     {isEditing && editingParticipantId === p.id && (
-                      <Pencil size={12} className={p.id === session?.participantId ? "text-black" : "text-zinc-400"} />
+                      <Pencil size={12} className={p.id === session?.participantId ? "text-on-brand" : "text-muted"} />
                     )}
                   </div>
                 ))}
@@ -685,7 +685,7 @@ export default function TablePage({
             className="space-y-4 pt-4"
           >
             {!uploadingReceipt && (
-              <p className="text-zinc-400 text-sm text-center">Scan your receipt to get started</p>
+              <p className="text-muted text-sm text-center">Scan your receipt to get started</p>
             )}
             <ReceiptUpload
               tableId={table.id}
@@ -722,14 +722,14 @@ export default function TablePage({
             animate={{ opacity: 1 }}
             className="pt-4"
           >
-            <p className="text-zinc-400 text-sm text-center mb-6">
+            <p className="text-muted text-sm text-center mb-6">
               Waiting for the host to scan the receipt…
             </p>
             <ProcessingState />
             <div className="flex flex-col items-center gap-3 mt-6">
               <Link
                 href="/"
-                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                className="text-xs text-muted hover:text-foreground transition-colors"
               >
                 Go home
               </Link>
@@ -755,8 +755,8 @@ export default function TablePage({
               <Check size={32} className="text-[var(--brand)]" />
             </motion.div>
             <div className="text-center">
-              <p className="text-white font-semibold text-lg">Bill scanned!</p>
-              <p className="text-zinc-400 text-sm">{items.length} items found</p>
+              <p className="text-foreground font-semibold text-lg">Bill scanned!</p>
+              <p className="text-muted text-sm">{items.length} items found</p>
             </div>
           </motion.div>
         )}
@@ -802,7 +802,7 @@ export default function TablePage({
             className="space-y-4"
           >
             {!isEditing && (
-              <p className="text-sm text-zinc-400">Tap everything you ate</p>
+              <p className="text-sm text-muted">Tap everything you ate</p>
             )}
             {session && (
               <ItemList
@@ -820,13 +820,13 @@ export default function TablePage({
 
             {/* Payments section */}
             <div className="space-y-3 mt-6">
-              <p className="text-xs text-zinc-500 uppercase tracking-wider px-1">Who paid?</p>
+              <p className="text-xs text-muted uppercase tracking-wider px-1">Who paid?</p>
 
               {/* Discount toggle (host only) */}
               {isHost && (
                 <div className="bg-[var(--surface)] rounded-xl px-4 py-3">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm text-zinc-200">Paid a different total?</p>
+                    <p className="text-sm text-foreground">Paid a different total?</p>
                     <button
                       onClick={() => {
                         const next = !useDiscount;
@@ -844,11 +844,11 @@ export default function TablePage({
                       role="switch"
                       aria-checked={useDiscount}
                       className={`relative w-12 h-7 rounded-full transition-colors ${
-                        useDiscount ? "bg-[var(--brand)]" : "bg-zinc-700"
+                        useDiscount ? "bg-[var(--brand)]" : "bg-surface-strong"
                       }`}
                     >
                       <span
-                        className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${
+                        className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-foreground transition-transform ${
                           useDiscount ? "translate-x-6" : ""
                         }`}
                       />
@@ -863,8 +863,8 @@ export default function TablePage({
                         className="overflow-hidden"
                       >
                         <div className="flex items-center gap-2 bg-[var(--surface-raised)] rounded-xl px-4 py-2.5 mt-2">
-                          <span className="text-zinc-400 text-sm">Actual paid</span>
-                          <span className="text-zinc-400 text-sm">{getCurrencySymbol(currency)}</span>
+                          <span className="text-muted text-sm">Actual paid</span>
+                          <span className="text-muted text-sm">{getCurrencySymbol(currency)}</span>
                           <input
                             type="text"
                             inputMode="decimal"
@@ -881,10 +881,10 @@ export default function TablePage({
                                 }).catch(() => {});
                               }
                             }}
-                            className="flex-1 bg-transparent text-zinc-100 text-sm text-right outline-none"
+                            className="flex-1 bg-transparent text-foreground text-sm text-right outline-none"
                           />
                         </div>
-                        <p className="text-xs text-zinc-500 mt-1.5">
+                        <p className="text-xs text-muted mt-1.5">
                           Original bill: {getCurrencySymbol(currency)}{billTotal.toFixed(2)}
                         </p>
                       </motion.div>
@@ -899,12 +899,12 @@ export default function TablePage({
                 const amount = payment ? parseFloat(payment.amount) : 0;
                 return (
                   <div key={p.id} className="flex items-center gap-3 px-4 py-3 bg-[var(--surface)] rounded-xl">
-                    <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-xs font-bold text-zinc-200 flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-surface-strong flex items-center justify-center text-xs font-bold text-foreground flex-shrink-0">
                       {p.displayName[0].toUpperCase()}
                     </div>
-                    <span className="text-zinc-200 text-sm flex-1">{p.displayName}</span>
+                    <span className="text-foreground text-sm flex-1">{p.displayName}</span>
                     {isHost && p.splitsSubmittedAt && (
-                      <Check size={14} className="text-emerald-400 flex-shrink-0" />
+                      <Check size={14} className="text-success flex-shrink-0" />
                     )}
                     {canEdit ? (
                       <PaymentInput
@@ -915,8 +915,8 @@ export default function TablePage({
                         currencySymbol={getCurrencySymbol(currency)}
                       />
                     ) : (
-                      <div className="flex items-center gap-1 text-sm text-zinc-300">
-                        <span className="text-zinc-400">{getCurrencySymbol(currency)}</span>
+                      <div className="flex items-center gap-1 text-sm text-foreground">
+                        <span className="text-muted">{getCurrencySymbol(currency)}</span>
                         {amount > 0 ? amount.toFixed(2) : "—"}
                       </div>
                     )}
@@ -930,18 +930,18 @@ export default function TablePage({
 
       {/* Bottom bar */}
       {showItems && phase === "items" && isHost && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0F0F0F]/90 backdrop-blur-sm border-t border-zinc-800">
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/90 backdrop-blur-sm border-t border-surface-raised">
           <div className="max-w-lg mx-auto">
             <button
               onClick={handleSettleClick}
               disabled={!canSettle || settling}
               aria-busy={settling}
-              className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full h-14 bg-[var(--brand)] hover:bg-brand/90 active:scale-95 text-on-brand font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {settling ? "Settling…" : "Settle up →"}
             </button>
             {!canSettle && (
-              <p className="text-xs text-zinc-500 text-center mt-2">
+              <p className="text-xs text-muted text-center mt-2">
                 {unselectedItems.length > 0
                   ? "Select all items to settle"
                   : missingPayments.length > 0
@@ -962,7 +962,7 @@ export default function TablePage({
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3 }}
-              className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0F0F0F] px-6 text-center gap-4"
+              className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background px-6 text-center gap-4"
             >
               <motion.div
                 animate={{ scale: [1, 1.15, 1] }}
@@ -972,20 +972,20 @@ export default function TablePage({
                 <Check size={32} className="text-[var(--brand)]" />
               </motion.div>
               <div className="space-y-1">
-                <h2 className="text-white font-semibold text-lg">You&apos;re all set!</h2>
-                <p className="text-zinc-400 text-sm">
+                <h2 className="text-foreground font-semibold text-lg">You&apos;re all set!</h2>
+                <p className="text-muted text-sm">
                   Your splits are in — go relax, we&apos;ll let everyone know when it&apos;s time to settle up.
                 </p>
               </div>
               <button
                 onClick={() => setSplitsSubmitted(false)}
-                className="mt-4 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                className="mt-4 text-xs text-muted hover:text-foreground transition-colors"
               >
                 edit my splits
               </button>
             </motion.div>
           ) : (
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0F0F0F]/90 backdrop-blur-sm border-t border-zinc-800">
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/90 backdrop-blur-sm border-t border-surface-raised">
               <div className="max-w-lg mx-auto">
                 <button
                   onClick={async () => {
@@ -1006,7 +1006,7 @@ export default function TablePage({
                       toast.error("Failed to submit splits, try again");
                     }
                   }}
-                  className="w-full h-14 bg-[var(--brand)] hover:bg-amber-300 active:scale-95 text-black font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all"
+                  className="w-full h-14 bg-[var(--brand)] hover:bg-brand/90 active:scale-95 text-on-brand font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-all"
                 >
                   Submit splits
                 </button>
@@ -1018,8 +1018,8 @@ export default function TablePage({
 
       {/* Share overlay — triggered by header Share button */}
       {showShareOverlay && phase !== "share" && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="bg-[#0F0F0F] w-full max-w-lg rounded-t-3xl sm:rounded-2xl p-6 max-h-[85vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-scrim/70 backdrop-blur-sm">
+          <div className="bg-background w-full max-w-lg rounded-t-3xl sm:rounded-2xl p-6 max-h-[85vh] overflow-y-auto">
             <ShareRoomSheet
               shareCode={shareCode}
               participants={participants}

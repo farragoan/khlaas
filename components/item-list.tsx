@@ -204,7 +204,7 @@ export function ItemList({
       {/* Host participant switcher (edit mode only) */}
       {isEditMode && canEditOthers && participants.length > 1 && (
         <div className="space-y-1">
-          <p className="text-xs text-zinc-500 uppercase tracking-wider px-1">Editing for</p>
+          <p className="text-xs text-muted uppercase tracking-wider px-1">Editing for</p>
           <div className="flex flex-wrap gap-2">
             {participants.map((p) => (
               <button
@@ -212,8 +212,8 @@ export function ItemList({
                 onClick={() => onEditingParticipantChange?.(p.id)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                   p.id === activeParticipantId
-                    ? "bg-[var(--brand)] text-black"
-                    : "bg-[var(--surface-raised)] text-zinc-300 hover:bg-zinc-700"
+                    ? "bg-[var(--brand)] text-on-brand"
+                    : "bg-[var(--surface-raised)] text-foreground hover:bg-surface-strong"
                 }`}
               >
                 {p.displayName}
@@ -226,21 +226,21 @@ export function ItemList({
 
       {/* Non-host in edit mode: show whose context is active */}
       {isEditMode && !canEditOthers && (
-        <p className="text-xs text-zinc-500 text-center">
+        <p className="text-xs text-muted text-center">
           Editing your selections — host will close edit mode when ready
         </p>
       )}
 
       {/* View toggle */}
       <div className="space-y-2">
-        <p className="text-xs text-zinc-500 uppercase tracking-wider px-1">View</p>
+        <p className="text-xs text-muted uppercase tracking-wider px-1">View</p>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setViewMode("by-item")}
             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
               viewMode === "by-item"
-                ? "bg-[var(--brand)] text-black"
-                : "bg-[var(--surface-raised)] text-zinc-300 hover:bg-zinc-700"
+                ? "bg-[var(--brand)] text-on-brand"
+                : "bg-[var(--surface-raised)] text-foreground hover:bg-surface-strong"
             }`}
           >
             By Item
@@ -249,8 +249,8 @@ export function ItemList({
             onClick={() => setViewMode("by-person")}
             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
               viewMode === "by-person"
-                ? "bg-[var(--brand)] text-black"
-                : "bg-[var(--surface-raised)] text-zinc-300 hover:bg-zinc-700"
+                ? "bg-[var(--brand)] text-on-brand"
+                : "bg-[var(--surface-raised)] text-foreground hover:bg-surface-strong"
             }`}
           >
             By Person
@@ -283,7 +283,7 @@ export function ItemList({
 
           {feeItems.length > 0 && (
             <div className="space-y-1">
-              <p className="text-xs text-zinc-500 px-1 uppercase tracking-wider">Shared fees</p>
+              <p className="text-xs text-muted px-1 uppercase tracking-wider">Shared fees</p>
               <div className="space-y-2">
                 {feeItems.map((item) => (
                   <ItemRow

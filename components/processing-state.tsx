@@ -9,9 +9,9 @@ export function ProcessingState() {
       </div>
       {Array.from({ length: 5 }).map((_, i) => (
         <div key={i} className="flex items-center gap-3 px-4 h-14 bg-[var(--surface)] rounded-xl">
-          <Skeleton className="w-5 h-5 rounded-md bg-zinc-800" />
-          <Skeleton className="h-4 flex-1 rounded bg-zinc-800" />
-          <Skeleton className="h-4 w-16 rounded bg-zinc-800" />
+          <Skeleton className="w-5 h-5 rounded-md bg-surface-raised" />
+          <Skeleton className="h-4 flex-1 rounded bg-surface-raised" />
+          <Skeleton className="h-4 w-16 rounded bg-surface-raised" />
         </div>
       ))}
     </div>

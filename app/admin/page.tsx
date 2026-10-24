@@ -22,9 +22,9 @@ interface ForbiddenResponse {
 }
 
 const STATUS_STYLE: Record<HealthStatus, { dot: string; chip: string; label: string }> = {
-  ok: { dot: "bg-emerald-400", chip: "bg-emerald-900/30 text-emerald-400", label: "OK" },
-  warn: { dot: "bg-amber-400", chip: "bg-amber-900/30 text-amber-400", label: "Warning" },
-  fail: { dot: "bg-red-400", chip: "bg-red-900/30 text-red-400", label: "Failing" },
+  ok: { dot: "bg-success", chip: "bg-success/15 text-success", label: "OK" },
+  warn: { dot: "bg-warning", chip: "bg-warning/15 text-warning", label: "Warning" },
+  fail: { dot: "bg-danger", chip: "bg-danger/15 text-danger", label: "Failing" },
 };
 
 const HEADLINE: Record<HealthStatus, string> = {
@@ -39,23 +39,23 @@ function CheckRow({ check }: { check: HealthCheck }) {
     <div className="bg-[var(--surface)] rounded-xl px-4 py-3.5 space-y-2">
       <div className="flex items-center gap-2.5">
         <span className={`w-2 h-2 rounded-full shrink-0 ${style.dot}`} aria-hidden />
-        <span className="text-sm font-medium text-zinc-100 flex-1 min-w-0">{check.label}</span>
+        <span className="text-sm font-medium text-foreground flex-1 min-w-0">{check.label}</span>
         <span className={`text-[11px] font-medium rounded-full px-2 py-0.5 ${style.chip}`}>
           {style.label}
         </span>
-        <span className="text-[11px] text-zinc-600 tabular-nums w-12 text-right">
+        <span className="text-[11px] text-muted tabular-nums w-12 text-right">
           {check.durationMs}ms
         </span>
       </div>
 
-      <p className="text-xs text-zinc-400 pl-[18px]">{check.summary}</p>
+      <p className="text-xs text-muted pl-[18px]">{check.summary}</p>
 
       {check.remedy && (
-        <p className="text-xs text-amber-400/80 pl-[18px]">{check.remedy}</p>
+        <p className="text-xs text-warning/80 pl-[18px]">{check.remedy}</p>
       )}
 
       {check.detail && (
-        <pre className="pl-[18px] text-[11px] text-zinc-600 overflow-x-auto">
+        <pre className="pl-[18px] text-[11px] text-muted overflow-x-auto">
           {Object.entries(check.detail)
             .map(([k, v]) => `${k}: ${typeof v === "string" ? v : JSON.stringify(v)}`)
             .join("\n")}
@@ -106,19 +106,19 @@ export default function AdminPage() {
 
   if (!isLoaded) {
     return (
-      <div className="flex items-center justify-center min-h-dvh bg-[#0F0F0F]">
-        <Loader2 className="animate-spin text-zinc-600" size={32} />
+      <div className="flex items-center justify-center min-h-dvh bg-background">
+        <Loader2 className="animate-spin text-muted" size={32} />
       </div>
     );
   }
 
   if (!isSignedIn) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-dvh bg-[#0F0F0F] px-6 text-center gap-5">
-        <h1 className="text-white font-semibold text-lg">Admin</h1>
-        <p className="text-zinc-500 text-sm">Sign in to see system health.</p>
+      <div className="flex flex-col items-center justify-center min-h-dvh bg-background px-6 text-center gap-5">
+        <h1 className="text-foreground font-semibold text-lg">Admin</h1>
+        <p className="text-muted text-sm">Sign in to see system health.</p>
         <SignInButton mode="modal" {...AUTH_MODAL_PROPS}>
-          <button className="px-6 py-3 bg-[var(--brand)] text-black font-semibold rounded-2xl text-sm">
+          <button className="px-6 py-3 bg-[var(--brand)] text-on-brand font-semibold rounded-2xl text-sm">
             Continue with Google
           </button>
         </SignInButton>
@@ -127,16 +127,16 @@ export default function AdminPage() {
   }
 
   return (
-    <main className="min-h-dvh bg-[#0F0F0F] flex flex-col max-w-lg mx-auto px-4 pb-10">
+    <main className="min-h-dvh bg-background flex flex-col max-w-lg mx-auto px-4 pb-10">
       <div className="flex items-center gap-3 py-5">
-        <Link href="/" className="text-zinc-400 hover:text-zinc-200 transition-colors">
+        <Link href="/" className="text-muted hover:text-foreground transition-colors">
           <ArrowLeft size={20} />
         </Link>
-        <h1 className="text-white font-semibold text-lg flex-1">System health</h1>
+        <h1 className="text-foreground font-semibold text-lg flex-1">System health</h1>
         <button
           onClick={load}
           disabled={loading}
-          className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200 transition-colors disabled:opacity-40"
+          className="flex items-center gap-1.5 text-xs text-muted hover:text-foreground transition-colors disabled:opacity-40"
         >
           <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
           Re-run
@@ -145,27 +145,27 @@ export default function AdminPage() {
 
       {forbidden && (
         <div className="bg-[var(--surface)] rounded-2xl px-4 py-4 space-y-3">
-          <p className="text-sm font-medium text-zinc-100">
+          <p className="text-sm font-medium text-foreground">
             {forbidden.configured ? "You're not on the admin allowlist" : "No admin is configured yet"}
           </p>
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-muted">
             Access is an explicit allowlist, and an unset one lets nobody in. Add
             your own Clerk ID to grant yourself access:
           </p>
-          <pre className="text-[11px] text-zinc-300 bg-black/40 rounded-lg p-3 overflow-x-auto">
+          <pre className="text-[11px] text-foreground bg-scrim/40 rounded-lg p-3 overflow-x-auto">
 {`netlify env:set ADMIN_USER_IDS "${forbidden.yourUserId ?? "<your-clerk-id>"}"`}
           </pre>
-          <p className="text-[11px] text-zinc-600">
+          <p className="text-[11px] text-muted">
             Comma-separate to add more. Redeploy for it to take effect.
           </p>
         </div>
       )}
 
-      {error && <p className="text-sm text-red-400 py-4">{error}</p>}
+      {error && <p className="text-sm text-danger py-4">{error}</p>}
 
       {loading && !data && (
         <div className="flex items-center justify-center py-16">
-          <Loader2 className="animate-spin text-zinc-600" size={28} />
+          <Loader2 className="animate-spin text-muted" size={28} />
         </div>
       )}
 
@@ -176,7 +176,7 @@ export default function AdminPage() {
               className={`w-2.5 h-2.5 rounded-full ${STATUS_STYLE[data.status].dot}`}
               aria-hidden
             />
-            <p className="text-sm text-zinc-200 font-medium">{HEADLINE[data.status]}</p>
+            <p className="text-sm text-foreground font-medium">{HEADLINE[data.status]}</p>
           </div>
 
           <div className="space-y-2.5">
@@ -185,7 +185,7 @@ export default function AdminPage() {
             ))}
           </div>
 
-          <p className="text-[11px] text-zinc-600 px-1 pt-2">
+          <p className="text-[11px] text-muted px-1 pt-2">
             Checked {new Date(data.checkedAt).toLocaleTimeString()}
             {data.deployedCommitRef && ` · deployed ${data.deployedCommitRef.slice(0, 8)}`}
           </p>

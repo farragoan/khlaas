@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function SettleSkeleton() {
   return (
-    <div className="min-h-dvh bg-[#0F0F0F] flex flex-col max-w-lg mx-auto px-4">
+    <div className="min-h-dvh bg-background flex flex-col max-w-lg mx-auto px-4">
       <div className="flex items-center justify-between py-5">
         <Skeleton className="w-6 h-6 rounded-md" />
         <Skeleton className="w-20 h-5 rounded-md" />

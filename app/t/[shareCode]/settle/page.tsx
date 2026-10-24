@@ -113,71 +113,71 @@ function PersonDetail({
       animate={{ x: 0 }}
       exit={{ x: "100%" }}
       transition={{ type: "spring", damping: 28, stiffness: 300 }}
-      className="fixed inset-0 bg-[#0F0F0F] z-50 flex flex-col max-w-lg mx-auto px-4 pb-16 overflow-y-auto"
+      className="fixed inset-0 bg-background z-50 flex flex-col max-w-lg mx-auto px-4 pb-16 overflow-y-auto"
     >
       <div className="flex items-center gap-3 py-5">
-        <button onClick={onClose} className="text-zinc-400 hover:text-zinc-200 transition-colors">
+        <button onClick={onClose} className="text-muted hover:text-foreground transition-colors">
           <ChevronLeft size={24} />
         </button>
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-sm font-bold text-zinc-200">
+          <div className="w-8 h-8 rounded-full bg-surface-strong flex items-center justify-center text-sm font-bold text-foreground">
             {participant.displayName[0].toUpperCase()}
           </div>
-          <span className="text-white font-semibold">{participant.displayName}</span>
+          <span className="text-foreground font-semibold">{participant.displayName}</span>
         </div>
       </div>
 
       {/* Share summary */}
-      <div className="mb-4 px-4 py-3 bg-zinc-900/50 rounded-xl">
-        <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Share</div>
-        <Price amount={consumed.total} className="text-xl font-bold text-zinc-100" />
+      <div className="mb-4 px-4 py-3 bg-surface/50 rounded-xl">
+        <div className="text-xs text-muted uppercase tracking-wider mb-1">Share</div>
+        <Price amount={consumed.total} className="text-xl font-bold text-foreground" />
       </div>
 
       {/* Food items breakdown */}
       <div className="space-y-3 mb-4">
         {myFoodRows.length === 0 && (
-          <p className="text-zinc-500 text-sm py-4 text-center">No items selected</p>
+          <p className="text-muted text-sm py-4 text-center">No items selected</p>
         )}
         {myFoodRows.map((row) => (
           <div key={row.id} className="flex items-center justify-between text-sm">
             <div>
-              <span className="text-zinc-200">{row.name}</span>
+              <span className="text-foreground">{row.name}</span>
               {row.itemQuantity > 1 && (
-                <span className="text-zinc-500 ml-1.5 text-xs">
+                <span className="text-muted ml-1.5 text-xs">
                   {row.myQty}/{row.totalAllocated} allocated
                 </span>
               )}
             </div>
-            <Price amount={row.myShare} className="text-zinc-300" />
+            <Price amount={row.myShare} className="text-foreground" />
           </div>
         ))}
       </div>
 
       {/* Fees and tip */}
       {(feeItems.length > 0 || consumed.tip > 0) && (
-        <div className="border-t border-zinc-800 pt-3 space-y-2 mb-4">
+        <div className="border-t border-surface-raised pt-3 space-y-2 mb-4">
           {feeItems.map((f) => (
             <div key={f.id} className="flex justify-between text-sm">
-              <span className="text-zinc-400">{f.name}</span>
-              <Price amount={parseFloat(f.totalPrice ?? "0") * consumed.proportion} className="text-zinc-400" />
+              <span className="text-muted">{f.name}</span>
+              <Price amount={parseFloat(f.totalPrice ?? "0") * consumed.proportion} className="text-muted" />
             </div>
           ))}
           {consumed.tip > 0 && (
             <div className="flex justify-between text-sm">
-              <span className="text-zinc-400">Tip (your share)</span>
-              <Price amount={consumed.tip} className="text-zinc-400" />
+              <span className="text-muted">Tip (your share)</span>
+              <Price amount={consumed.tip} className="text-muted" />
             </div>
           )}
         </div>
       )}
 
       {/* Paid and net */}
-      <div className="border-t border-zinc-800 pt-3 space-y-2">
+      <div className="border-t border-surface-raised pt-3 space-y-2">
         <div className="flex justify-between text-sm">
-          <span className="text-zinc-400">Paid</span>
+          <span className="text-muted">Paid</span>
           <Price amount={paid} className="text-[var(--selected)] font-medium" />
         </div>
-        <div className="flex justify-between text-base font-semibold pt-2 border-t border-zinc-800">
+        <div className="flex justify-between text-base font-semibold pt-2 border-t border-surface-raised">
           <span className={net > 0.005 ? "text-[var(--danger)]" : "text-[var(--selected)]"}>
             {net > 0.005 ? "Still owes" : net < -0.005 ? "Gets back" : "Settled ✓"}
           </span>
@@ -235,17 +235,17 @@ function PersonTotal({
         className="w-full flex items-center justify-between px-4 py-4 bg-[var(--surface)] rounded-xl active:scale-[0.98] transition-transform text-left"
       >
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-zinc-700 flex items-center justify-center text-sm font-bold text-zinc-200">
+          <div className="w-9 h-9 rounded-full bg-surface-strong flex items-center justify-center text-sm font-bold text-foreground">
             {participant.displayName[0].toUpperCase()}
           </div>
           <div>
-            <span className="font-medium text-zinc-100 block">{participant.displayName}</span>
-            <span className="text-xs text-zinc-500">Tap for breakdown</span>
+            <span className="font-medium text-foreground block">{participant.displayName}</span>
+            <span className="text-xs text-muted">Tap for breakdown</span>
           </div>
         </div>
         <div className="text-right">
-          <div className="text-xs text-zinc-500">Share</div>
-          <Price amount={consumed.total} className="text-sm text-zinc-300 block" />
+          <div className="text-xs text-muted">Share</div>
+          <Price amount={consumed.total} className="text-sm text-foreground block" />
           <div className={`text-base font-semibold ${net > 0.005 ? "text-[var(--danger)]" : "text-[var(--selected)]"}`}>
             {net > 0.005 ? "Owes" : net < -0.005 ? "Gets back" : "Settled ✓"}
             {Math.abs(net) > 0.005 && (
@@ -274,7 +274,7 @@ function ReopenConfirmModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center"
+      className="fixed inset-0 bg-scrim/70 z-50 flex items-end justify-center"
       onClick={onCancel}
     >
       <MotionDiv
@@ -283,15 +283,15 @@ function ReopenConfirmModal({
         exit={{ y: "100%" }}
         transition={{ type: "spring", damping: 28, stiffness: 300 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg bg-[#1A1A1A] rounded-t-2xl px-4 pt-5 pb-10"
+        className="w-full max-w-lg bg-surface rounded-t-2xl px-4 pt-5 pb-10"
       >
         <div className="flex items-start gap-3 mb-5">
-          <div className="w-10 h-10 rounded-full bg-amber-500/15 flex items-center justify-center flex-shrink-0">
-            <AlertTriangle size={20} className="text-amber-400" />
+          <div className="w-10 h-10 rounded-full bg-warning/15 flex items-center justify-center flex-shrink-0">
+            <AlertTriangle size={20} className="text-warning" />
           </div>
           <div>
-            <h3 className="text-white font-semibold mb-1">Re-open this bill?</h3>
-            <p className="text-zinc-400 text-sm">
+            <h3 className="text-foreground font-semibold mb-1">Re-open this bill?</h3>
+            <p className="text-muted text-sm">
               This will clear the current settlement. {hostName} and everyone else can update their selections.
             </p>
           </div>
@@ -300,13 +300,13 @@ function ReopenConfirmModal({
           <button
             onClick={onConfirm}
             disabled={loading}
-            className="w-full h-12 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl active:scale-95 transition-all disabled:opacity-60"
+            className="w-full h-12 bg-warning hover:bg-warning/90 text-on-brand font-semibold rounded-xl active:scale-95 transition-all disabled:opacity-60"
           >
             {loading ? "Reopening…" : "Re-open bill"}
           </button>
           <button
             onClick={onCancel}
-            className="w-full h-12 text-zinc-400 text-sm hover:text-zinc-200 transition-colors"
+            className="w-full h-12 text-muted text-sm hover:text-foreground transition-colors"
           >
             Cancel
           </button>
@@ -426,13 +426,13 @@ export default function SettlePage({
   return (
     <CurrencyProvider value={table.currency ?? "INR"}>
     <>
-      <main className="min-h-dvh bg-[#0F0F0F] flex flex-col max-w-lg mx-auto px-4 pb-16">
+      <main className="min-h-dvh bg-background flex flex-col max-w-lg mx-auto px-4 pb-16">
         {/* Header */}
         <div className="flex items-center justify-between py-5">
           <div className="flex items-center gap-2">
             <button
               onClick={() => router.push(`/t/${shareCode}`)}
-              className="text-zinc-400 hover:text-zinc-200 transition-colors"
+              className="text-muted hover:text-foreground transition-colors"
             >
               <ChevronLeft size={20} />
             </button>
@@ -440,7 +440,7 @@ export default function SettlePage({
           </div>
           <button
             onClick={handleShare}
-            className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+            className="flex items-center gap-1.5 text-sm text-muted hover:text-foreground transition-colors"
           >
             <Share2 size={16} />
             Share
@@ -450,23 +450,23 @@ export default function SettlePage({
         <MotionDiv
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-2xl font-bold text-white mb-2"
+          className="text-2xl font-bold text-foreground mb-2"
         >
           All settled ✓
         </MotionDiv>
-        <p className="text-zinc-400 text-sm mb-6">Tap a person to see their breakdown</p>
+        <p className="text-muted text-sm mb-6">Tap a person to see their breakdown</p>
 
         {/* Paid by */}
         {payments.length > 0 && (
           <div className="mb-6">
-            <p className="text-xs text-zinc-500 uppercase tracking-wider px-1 mb-2">Paid by</p>
+            <p className="text-xs text-muted uppercase tracking-wider px-1 mb-2">Paid by</p>
             <div className="flex flex-wrap gap-2">
               {payments.map((pay) => (
                 <div
                   key={pay.id}
                   className="flex items-center gap-2 px-3 py-2 bg-[var(--surface)] rounded-xl text-sm"
                 >
-                  <span className="font-medium text-zinc-200">
+                  <span className="font-medium text-foreground">
                     {participantName(pay.participantId, participants)}
                   </span>
                   <Price amount={pay.amount} className="text-[var(--selected)]" />
@@ -499,9 +499,9 @@ export default function SettlePage({
           <MotionDiv
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-4 px-4 py-3 bg-zinc-900/50 rounded-xl"
+            className="mb-4 px-4 py-3 bg-surface/50 rounded-xl"
           >
-            <p className="text-sm text-zinc-300 mb-2">
+            <p className="text-sm text-foreground mb-2">
               Add UPI ID to let your friends pay you from खल्लास
             </p>
             <div className="flex gap-2">
@@ -511,12 +511,12 @@ export default function SettlePage({
                 value={upiInput}
                 onChange={(e) => setUpiInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSaveUpi()}
-                className="flex-1 h-9 px-3 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-zinc-500"
+                className="flex-1 h-9 px-3 bg-surface-raised border border-border rounded-lg text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-border"
               />
               <button
                 onClick={handleSaveUpi}
                 disabled={savingUpi || !upiInput.trim()}
-                className="h-9 px-3 bg-[var(--brand)] text-black text-xs font-semibold rounded-lg active:scale-95 transition-transform disabled:opacity-50"
+                className="h-9 px-3 bg-[var(--brand)] text-on-brand text-xs font-semibold rounded-lg active:scale-95 transition-transform disabled:opacity-50"
               >
                 {savingUpi ? "…" : "Save"}
               </button>
@@ -527,7 +527,7 @@ export default function SettlePage({
         {/* Transfer list */}
         {ledger.length > 0 && (
           <div className="space-y-3">
-            <p className="text-xs text-zinc-500 uppercase tracking-wider px-1">Transfers needed</p>
+            <p className="text-xs text-muted uppercase tracking-wider px-1">Transfers needed</p>
             {ledger.map((entry, i) => {
               const recipient = participants.find((p) => p.id === entry.toParticipant);
               const recipientUpiId = recipient?.upiId;
@@ -540,11 +540,11 @@ export default function SettlePage({
                   transition={{ delay: 0.2 + i * 0.08 }}
                   className="flex items-center gap-2 px-4 py-3 bg-[var(--surface-raised)] rounded-xl text-sm"
                 >
-                  <span className="font-medium text-zinc-200">
+                  <span className="font-medium text-foreground">
                     {participantName(entry.fromParticipant, participants)}
                   </span>
-                  <span className="text-zinc-500">pays</span>
-                  <span className="font-medium text-zinc-200">
+                  <span className="text-muted">pays</span>
+                  <span className="font-medium text-foreground">
                     {participantName(entry.toParticipant, participants)}
                   </span>
                   <Price amount={entry.amount} className="ml-auto text-[var(--brand)]" />
@@ -557,7 +557,7 @@ export default function SettlePage({
                           amount: parseFloat(entry.amount),
                         })
                       }
-                      className="flex items-center gap-1 ml-2 px-2.5 py-1 bg-[var(--brand)] text-black text-xs font-semibold rounded-lg active:scale-95 transition-transform flex-shrink-0"
+                      className="flex items-center gap-1 ml-2 px-2.5 py-1 bg-[var(--brand)] text-on-brand text-xs font-semibold rounded-lg active:scale-95 transition-transform flex-shrink-0"
                     >
                       <Smartphone size={12} />
                       Pay
@@ -574,7 +574,7 @@ export default function SettlePage({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="text-zinc-500 text-center py-8"
+            className="text-muted text-center py-8"
           >
             Everyone&apos;s even — no transfers needed
           </MotionDiv>
@@ -588,10 +588,10 @@ export default function SettlePage({
             transition={{ delay: 0.4 }}
             className="mt-8 flex flex-col items-center gap-3"
           >
-            <p className="text-zinc-500 text-sm">Want to change something?</p>
+            <p className="text-muted text-sm">Want to change something?</p>
             <button
               onClick={() => setShowReopenModal(true)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[var(--surface-raised)] hover:bg-zinc-600 text-zinc-200 text-sm font-medium rounded-xl active:scale-95 transition-all"
+              className="flex items-center gap-2 px-5 py-2.5 bg-[var(--surface-raised)] hover:bg-border/60 text-foreground text-sm font-medium rounded-xl active:scale-95 transition-all"
             >
               <RotateCcw size={14} />
               Re-open bill

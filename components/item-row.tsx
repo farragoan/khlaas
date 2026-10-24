@@ -44,7 +44,7 @@ export function ItemRow({
         ${isFee
           ? "bg-[var(--surface)] opacity-60 cursor-default"
           : isSelected
-          ? "bg-emerald-950/50 border border-[var(--selected)]/40"
+          ? "bg-selected/10 border border-[var(--selected)]/40"
           : "bg-[var(--surface)] hover:bg-[var(--surface-raised)] active:bg-[var(--surface-raised)]"
         }
       `}
@@ -63,9 +63,9 @@ export function ItemRow({
                     onQuantityChange(myQuantity - 1);
                   }
                 }}
-                className="w-7 h-7 rounded-md bg-zinc-700 hover:bg-zinc-600 active:bg-zinc-500 flex items-center justify-center transition-colors"
+                className="w-7 h-7 rounded-md bg-surface-strong hover:bg-border/60 active:bg-border flex items-center justify-center transition-colors"
               >
-                <Minus size={14} className="text-zinc-200" />
+                <Minus size={14} className="text-foreground" />
               </button>
               <span className="w-7 text-center text-sm font-semibold text-[var(--selected)] tabular-nums">
                 {myQuantity}
@@ -78,9 +78,9 @@ export function ItemRow({
                   }
                 }}
                 disabled={myQuantity >= maxQuantity}
-                className="w-7 h-7 rounded-md bg-zinc-700 hover:bg-zinc-600 active:bg-zinc-500 flex items-center justify-center transition-colors disabled:opacity-40"
+                className="w-7 h-7 rounded-md bg-surface-strong hover:bg-border/60 active:bg-border flex items-center justify-center transition-colors disabled:opacity-40"
               >
-                <Plus size={14} className="text-zinc-200" />
+                <Plus size={14} className="text-foreground" />
               </button>
             </div>
           ) : (
@@ -89,13 +89,13 @@ export function ItemRow({
                 w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center transition-colors
                 ${isSelected
                   ? "bg-[var(--selected)] border-[var(--selected)]"
-                  : "border-zinc-600"
+                  : "border-border"
                 }
               `}
             >
               {isSelected && (
-                <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
-                  <path d="M1 5L4.5 8.5L11 1.5" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <svg width="12" height="10" viewBox="0 0 12 10" fill="none" className="text-background">
+                  <path d="M1 5L4.5 8.5L11 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               )}
             </div>
@@ -104,12 +104,12 @@ export function ItemRow({
       )}
 
       {/* Name */}
-      <span className={`flex-1 text-left text-sm font-medium ${isFee ? "text-zinc-400" : "text-zinc-100"}`}>
+      <span className={`flex-1 text-left text-sm font-medium ${isFee ? "text-muted" : "text-foreground"}`}>
         {item.name}
         {item.quantity > 1 && (
-          <span className="text-zinc-500 ml-1">×{item.quantity}</span>
+          <span className="text-muted ml-1">×{item.quantity}</span>
         )}
-        {isFee && <span className="ml-2 text-xs text-zinc-500">(shared fee)</span>}
+        {isFee && <span className="ml-2 text-xs text-muted">(shared fee)</span>}
       </span>
 
       {/* Selector avatars */}
@@ -120,13 +120,13 @@ export function ItemRow({
               key={p.id}
               title={p.displayName}
               aria-label={p.displayName}
-              className="w-6 h-6 rounded-full bg-zinc-600 border border-[var(--surface)] flex items-center justify-center text-[10px] font-bold text-zinc-200 flex-shrink-0"
+              className="w-6 h-6 rounded-full bg-surface-strong border border-[var(--surface)] flex items-center justify-center text-[10px] font-bold text-foreground flex-shrink-0"
             >
               {p.displayName[0].toUpperCase()}
             </div>
           ))}
           {selectors.length > 4 && (
-            <div className="w-6 h-6 rounded-full bg-zinc-700 border border-[var(--surface)] flex items-center justify-center text-[10px] text-zinc-400">
+            <div className="w-6 h-6 rounded-full bg-surface-strong border border-[var(--surface)] flex items-center justify-center text-[10px] text-foreground">
               +{selectors.length - 4}
             </div>
           )}
@@ -136,7 +136,7 @@ export function ItemRow({
       {/* Price */}
       <Price
         amount={item.totalPrice ?? item.unitPrice}
-        className={`text-sm ${isFee ? "text-zinc-400" : isSelected ? "text-[var(--selected)]" : "text-zinc-300"}`}
+        className={`text-sm ${isFee ? "text-muted" : isSelected ? "text-[var(--selected)]" : "text-foreground"}`}
       />
     </motion.button>
   );

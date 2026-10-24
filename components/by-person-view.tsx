@@ -32,11 +32,11 @@ export function ByPersonView({ participants, items, selections }: ByPersonViewPr
         const claims = claimsByParticipant.get(participant.id) ?? [];
         return (
           <div key={participant.id} className="bg-[var(--surface)] rounded-xl px-4 py-3 space-y-2">
-            <p className="text-sm font-semibold text-white">{participant.displayName}</p>
+            <p className="text-sm font-semibold text-foreground">{participant.displayName}</p>
 
             {/* An empty person is information, so they stay on screen. */}
             {claims.length === 0 ? (
-              <p className="text-xs text-zinc-500">Nothing yet</p>
+              <p className="text-xs text-muted">Nothing yet</p>
             ) : (
               <div className="space-y-1.5">
                 {claims.map((claim) => {
@@ -47,15 +47,15 @@ export function ByPersonView({ participants, items, selections }: ByPersonViewPr
                       key={claim.itemId}
                       className="flex items-baseline justify-between gap-3 text-sm"
                     >
-                      <span className="text-zinc-300 min-w-0 truncate">
+                      <span className="text-foreground min-w-0 truncate">
                         {item.name}
                         {claim.quantity > 1 && (
-                          <span className="text-zinc-500"> ×{claim.quantity}</span>
+                          <span className="text-muted"> ×{claim.quantity}</span>
                         )}
                       </span>
                       <Price
                         amount={Number(item.unitPrice) * claim.quantity}
-                        className="text-zinc-400 shrink-0"
+                        className="text-muted shrink-0"
                       />
                     </div>
                   );

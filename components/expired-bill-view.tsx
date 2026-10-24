@@ -48,22 +48,22 @@ export function ExpiredBillView({
 
   return (
     <main
-      className="min-h-dvh bg-[#0F0F0F] flex flex-col max-w-lg mx-auto px-4"
+      className="min-h-dvh bg-background flex flex-col max-w-lg mx-auto px-4"
       style={{ paddingBottom: "calc(2rem + env(safe-area-inset-bottom, 0px))" }}
     >
       <div className="flex items-center justify-between py-5">
         <h1 className="text-[var(--brand)] font-bold text-xl">खल्लास</h1>
-        <span className="flex items-center gap-1.5 text-xs text-zinc-500">
+        <span className="flex items-center gap-1.5 text-xs text-muted">
           <Lock size={13} />
           View only
         </span>
       </div>
 
       <div className="flex items-start gap-3 bg-[var(--surface)] rounded-2xl px-4 py-3.5">
-        <Clock size={18} className="text-zinc-400 mt-0.5 shrink-0" />
+        <Clock size={18} className="text-muted mt-0.5 shrink-0" />
         <div className="space-y-0.5">
-          <p className="text-sm font-medium text-zinc-100">This bill expired</p>
-          <p className="text-xs text-zinc-500">
+          <p className="text-sm font-medium text-foreground">This bill expired</p>
+          <p className="text-xs text-muted">
             Bills lock 24 hours after they&apos;re created. Everything below is
             kept as it was — it just can&apos;t be changed any more.
           </p>
@@ -71,29 +71,29 @@ export function ExpiredBillView({
       </div>
 
       {items.length === 0 ? (
-        <p className="text-sm text-zinc-500 text-center py-12">
+        <p className="text-sm text-muted text-center py-12">
           This bill expired before a receipt was scanned, so there&apos;s nothing
           on it.
         </p>
       ) : (
         <div className="space-y-7 mt-6">
           <section className="space-y-2">
-            <p className="text-xs text-zinc-500 uppercase tracking-wider px-1">
+            <p className="text-xs text-muted uppercase tracking-wider px-1">
               The bill
             </p>
-            <div className="bg-[var(--surface)] rounded-xl divide-y divide-zinc-800">
+            <div className="bg-[var(--surface)] rounded-xl divide-y divide-surface-raised">
               {regularItems.map((item) => (
                 <div
                   key={item.id}
                   className="flex items-baseline justify-between gap-3 px-4 py-2.5 text-sm"
                 >
-                  <span className="text-zinc-300 min-w-0 truncate">
+                  <span className="text-foreground min-w-0 truncate">
                     {item.name}
                     {item.quantity > 1 && (
-                      <span className="text-zinc-500"> ×{item.quantity}</span>
+                      <span className="text-muted"> ×{item.quantity}</span>
                     )}
                   </span>
-                  <Price amount={item.totalPrice ?? "0"} className="text-zinc-400 shrink-0" />
+                  <Price amount={item.totalPrice ?? "0"} className="text-muted shrink-0" />
                 </div>
               ))}
               {feeItems.map((item) => (
@@ -101,19 +101,19 @@ export function ExpiredBillView({
                   key={item.id}
                   className="flex items-baseline justify-between gap-3 px-4 py-2.5 text-sm"
                 >
-                  <span className="text-zinc-500 min-w-0 truncate">{item.name}</span>
-                  <Price amount={item.totalPrice ?? "0"} className="text-zinc-500 shrink-0" />
+                  <span className="text-muted min-w-0 truncate">{item.name}</span>
+                  <Price amount={item.totalPrice ?? "0"} className="text-muted shrink-0" />
                 </div>
               ))}
               <div className="flex items-baseline justify-between gap-3 px-4 py-3 text-sm">
-                <span className="text-zinc-200 font-medium">Total</span>
-                <Price amount={billTotal} className="text-white font-semibold shrink-0" />
+                <span className="text-foreground font-medium">Total</span>
+                <Price amount={billTotal} className="text-foreground font-semibold shrink-0" />
               </div>
             </div>
           </section>
 
           <section className="space-y-2">
-            <p className="text-xs text-zinc-500 uppercase tracking-wider px-1">
+            <p className="text-xs text-muted uppercase tracking-wider px-1">
               Who took what
             </p>
             <ByPersonView
@@ -124,17 +124,17 @@ export function ExpiredBillView({
             {/* Unclaimed items are the usual reason a bill times out unsettled,
                 so naming them explains the expiry rather than hiding it. */}
             {unclaimed.length > 0 && (
-              <p className="text-xs text-zinc-500 px-1 pt-1">
+              <p className="text-xs text-muted px-1 pt-1">
                 Never claimed: {unclaimed.map((i) => i.name).join(", ")}
               </p>
             )}
           </section>
 
           <section className="space-y-2">
-            <p className="text-xs text-zinc-500 uppercase tracking-wider px-1">
+            <p className="text-xs text-muted uppercase tracking-wider px-1">
               Who paid
             </p>
-            <div className="bg-[var(--surface)] rounded-xl divide-y divide-zinc-800">
+            <div className="bg-[var(--surface)] rounded-xl divide-y divide-surface-raised">
               {participants.map((p) => {
                 const amount = paidBy.get(p.id);
                 return (
@@ -142,21 +142,21 @@ export function ExpiredBillView({
                     key={p.id}
                     className="flex items-center gap-3 px-4 py-2.5 text-sm"
                   >
-                    <span className="text-zinc-300 flex-1 min-w-0 truncate">
+                    <span className="text-foreground flex-1 min-w-0 truncate">
                       {p.displayName}
                     </span>
                     {amount != null && amount > 0 ? (
-                      <Price amount={amount} className="text-zinc-400 shrink-0" />
+                      <Price amount={amount} className="text-muted shrink-0" />
                     ) : (
-                      <span className="text-zinc-600 shrink-0">—</span>
+                      <span className="text-muted shrink-0">—</span>
                     )}
                   </div>
                 );
               })}
               {totalPaid > 0 && (
                 <div className="flex items-baseline justify-between gap-3 px-4 py-3 text-sm">
-                  <span className="text-zinc-200 font-medium">Paid in total</span>
-                  <Price amount={totalPaid} className="text-white font-semibold shrink-0" />
+                  <span className="text-foreground font-medium">Paid in total</span>
+                  <Price amount={totalPaid} className="text-foreground font-semibold shrink-0" />
                 </div>
               )}
             </div>
@@ -166,13 +166,13 @@ export function ExpiredBillView({
 
       <Link
         href="/"
-        className="mt-8 w-full h-12 flex items-center justify-center bg-[var(--brand)] text-black font-semibold rounded-2xl text-sm"
+        className="mt-8 w-full h-12 flex items-center justify-center bg-[var(--brand)] text-on-brand font-semibold rounded-2xl text-sm"
       >
         Start a new bill
       </Link>
       <Link
         href="/history"
-        className="mt-3 mb-2 text-center text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+        className="mt-3 mb-2 text-center text-xs text-muted hover:text-foreground transition-colors"
       >
         Back to your bills
       </Link>

@@ -32,7 +32,7 @@ export function ScanningLoader({ messages }: { messages?: string[] }) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -6 }}
           transition={{ duration: 0.3 }}
-          className="text-sm text-zinc-400 text-center"
+          className="text-sm text-muted text-center"
         >
           {list[index]}
         </motion.p>

@@ -69,7 +69,7 @@ export function InstallPrompt() {
     <div
       role="region"
       aria-label="Install app"
-      className="fixed inset-x-3 bottom-3 z-50 flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 p-3 text-sm text-white shadow-lg"
+      className="fixed inset-x-3 bottom-3 z-50 flex items-center gap-3 rounded-2xl border border-surface-raised bg-surface p-3 text-sm text-foreground shadow-lg"
       style={{ marginBottom: "env(safe-area-inset-bottom)" }}
     >
       <p className="flex-1">
@@ -81,7 +81,7 @@ export function InstallPrompt() {
         <button
           type="button"
           onClick={install}
-          className="min-h-11 rounded-xl bg-amber-400 px-4 font-medium text-black"
+          className="min-h-11 rounded-xl bg-brand px-4 font-medium text-on-brand"
         >
           Install
         </button>
@@ -90,7 +90,7 @@ export function InstallPrompt() {
         type="button"
         onClick={dismiss}
         aria-label="Dismiss"
-        className="min-h-11 min-w-11 text-zinc-400"
+        className="min-h-11 min-w-11 text-muted"
       >
         ✕
       </button>
