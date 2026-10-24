@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { splitTables, items, participants, selections, ledgerEntries, payments } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { verifyHost } from "@/lib/auth";
+import { verifyHost, hashToken } from "@/lib/auth";
+import { publicTable, publicParticipant } from "@/lib/public-view";
 import { auth } from "@clerk/nextjs/server";
+import { MAX_MONEY } from "@/lib/schemas";
 import { EXPIRED_ERROR, EXPIRED_STATUS, isExpired } from "@/lib/table-lock";
 
 export async function GET(
@@ -22,7 +24,7 @@ export async function GET(
     return NextResponse.json({ error: "Table not found" }, { status: 404 });
   }
 
-  const [tableItems, tableParticipants] = await Promise.all([
+  const [tableItems, rawParticipants] = await Promise.all([
     db.select().from(items).where(eq(items.tableId, table.id)),
     db
       .select({
@@ -30,27 +32,13 @@ export async function GET(
         tableId: participants.tableId,
         displayName: participants.displayName,
         userId: participants.userId,
+        sessionToken: participants.sessionToken,
         upiId: participants.upiId,
         joinedAt: participants.joinedAt,
         splitsSubmittedAt: participants.splitsSubmittedAt,
       })
       .from(participants)
-      .where(eq(participants.tableId, table.id))
-      .catch(() =>
-        // upi_id / splits_submitted_at columns not yet migrated — fall back without them
-        db
-          .select({
-            id: participants.id,
-            tableId: participants.tableId,
-            displayName: participants.displayName,
-            userId: participants.userId,
-            joinedAt: participants.joinedAt,
-          })
-          .from(participants)
-          .where(eq(participants.tableId, table.id))
-          .then((rows) => rows.map((r) => ({ ...r, upiId: null as string | null, splitsSubmittedAt: null as Date | null }))
-          )
-      ),
+      .where(eq(participants.tableId, table.id)),
   ]);
 
   const [tableSelections, tablePayments, tableLedger] = await Promise.all([
@@ -71,17 +59,27 @@ export async function GET(
   const { userId } = await auth();
   const hostParticipant = await verifyHost(table.id, { sessionToken, clerkUserId: userId });
 
+  // Who is asking? A participant is "me" by session token or by Clerk identity.
+  const tokenHash = sessionToken ? hashToken(sessionToken) : null;
+  const me = rawParticipants.find(
+    (p) => (tokenHash && p.sessionToken === tokenHash) || (userId && p.userId === userId)
+  );
+  const payOut = table.status === "settled" || table.status === "editing";
+
   const response = NextResponse.json({
-    table,
+    table: publicTable(table),
     items: tableItems,
-    participants: tableParticipants,
+    participants: rawParticipants.map((p) => publicParticipant(p, { isMe: p.id === me?.id, isHost: !!hostParticipant, viewerIsParticipant: !!me, payOut })),
     selections: tableSelections,
     payments: tablePayments,
     ledger: tableLedger,
     isHost: !!hostParticipant,
   });
 
-  response.headers.set("Cache-Control", "public, s-maxage=2, stale-while-revalidate=5");
+  // Per-viewer fields (isHost, own userId, visible upiIds) mean this response
+  // must never sit in a shared cache keyed only by URL.
+  response.headers.set("Cache-Control", "private, no-store");
+  response.headers.set("Vary", "x-session-token, cookie");
 
   return response;
 }
@@ -116,7 +114,10 @@ export async function PATCH(
     return NextResponse.json({ error: "Only the host can update the table" }, { status: 403 });
   }
 
-  const body = await req.json();
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
   const updates: Record<string, unknown> = {};
 
   if (body.currency && typeof body.currency === "string" && body.currency.length === 3) {
@@ -129,7 +130,7 @@ export async function PATCH(
 
   if (body.actualPaidTotal === null) {
     updates.actualPaidTotal = null;
-  } else if (typeof body.actualPaidTotal === "number" && body.actualPaidTotal >= 0) {
+  } else if (typeof body.actualPaidTotal === "number" && Number.isFinite(body.actualPaidTotal) && body.actualPaidTotal >= 0 && body.actualPaidTotal <= MAX_MONEY) {
     const tableItems = await db.select().from(items).where(eq(items.tableId, table.id));
     const billTotal = tableItems.reduce((sum, i) => sum + parseFloat(i.totalPrice ?? "0"), 0);
     if (billTotal > 0 && body.actualPaidTotal > billTotal) {

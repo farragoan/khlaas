@@ -4,11 +4,18 @@ import { db } from "@/lib/db/client";
 import { participants, splitTables } from "@/lib/db/schema";
 import { JoinParticipantSchema, UpdateParticipantSchema } from "@/lib/schemas";
 import { hashToken } from "@/lib/auth";
-import { EXPIRED_ERROR, EXPIRED_STATUS, isExpired } from "@/lib/table-lock";
-import { eq, sql } from "drizzle-orm";
+import {
+  EXPIRED_ERROR,
+  EXPIRED_STATUS,
+  SETTLED_ERROR,
+  SETTLED_STATUS,
+  isExpired,
+  isSettled,
+} from "@/lib/table-lock";
+import { and, eq, sql } from "drizzle-orm";
 
 export async function POST(req: Request) {
-  const body = await req.json();
+  const body = await req.json().catch(() => null);
   const parsed = JoinParticipantSchema.safeParse(body);
 
   if (!parsed.success) {
@@ -27,12 +34,32 @@ export async function POST(req: Request) {
     .where(eq(splitTables.id, tableId))
     .limit(1);
 
-  if (isExpired(table?.status)) {
+  if (!table) {
+    return NextResponse.json({ error: "Table not found" }, { status: 404 });
+  }
+
+  if (isExpired(table.status)) {
     return NextResponse.json({ error: EXPIRED_ERROR }, { status: EXPIRED_STATUS });
   }
 
   // Attach Clerk userId if the request comes from a signed-in user
   const { userId } = await auth();
+
+  // A settled bill has a fixed ledger, so a new person cannot join its roster.
+  // A signed-in person who is already on it may still reclaim their own row
+  // (new device, cleared storage) via the upsert below.
+  if (isSettled(table.status)) {
+    const [existing] = userId
+      ? await db
+          .select({ id: participants.id })
+          .from(participants)
+          .where(and(eq(participants.tableId, tableId), eq(participants.userId, userId)))
+          .limit(1)
+      : [];
+    if (!existing) {
+      return NextResponse.json({ error: SETTLED_ERROR }, { status: SETTLED_STATUS });
+    }
+  }
 
   // A signed-in user is one participant per table, enforced by the partial
   // unique index on (table_id, user_id). Reopening a share link after
@@ -68,7 +95,7 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Missing session token" }, { status: 401 });
   }
 
-  const body = await req.json();
+  const body = await req.json().catch(() => null);
   const parsedBody = UpdateParticipantSchema.safeParse(body);
   if (!parsedBody.success) {
     return NextResponse.json({ error: parsedBody.error.flatten() }, { status: 400 });
