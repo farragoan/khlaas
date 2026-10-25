@@ -20,3 +20,8 @@ export const OCR_MODEL = "gemini-3.5-flash-lite";
 
 export const GOOGLE_AI_API_URL =
   `https://generativelanguage.googleapis.com/v1beta/models/${OCR_MODEL}:generateContent`;
+
+/** Gemini auth belongs in a header: query strings are logged by every proxy on the path. */
+export function googleAiHeaders(apiKey: string): Record<string, string> {
+  return { "Content-Type": "application/json", "x-goog-api-key": apiKey };
+}

@@ -1,6 +1,7 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { checkRateLimit } from "./lib/rate-limit";
+import { trustedClientIp } from "./lib/client-ip";
 
 const RATE_LIMITS: Array<{
   match: (path: string, method: string) => boolean;
@@ -32,8 +33,7 @@ const RATE_LIMITS: Array<{
 export default clerkMiddleware(async (auth, req) => {
   const url = req.nextUrl;
   if (url.pathname.startsWith("/api/")) {
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const ip = trustedClientIp(req.headers);
     const route = RATE_LIMITS.find((r) =>
       r.match(url.pathname, req.method),
     );

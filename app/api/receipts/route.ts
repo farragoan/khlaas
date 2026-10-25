@@ -5,7 +5,7 @@ import { ProcessReceiptSchema } from "@/lib/schemas";
 import { verifyHost } from "@/lib/auth";
 import { auth } from "@clerk/nextjs/server";
 import { reportError } from "@/lib/observability";
-import { GOOGLE_AI_API_URL } from "@/lib/ocr-config";
+import { GOOGLE_AI_API_URL, googleAiHeaders } from "@/lib/ocr-config";
 import { eq } from "drizzle-orm";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -134,9 +134,9 @@ async function extractViaGoogleAI(imageBase64: string): Promise<OcrResult> {
   if (!apiKey) throw new Error("GOOGLE_AI_STUDIO_API_KEY is not set");
 
   return withRetry(async () => {
-    const response = await fetch(`${GOOGLE_AI_API_URL}?key=${apiKey}`, {
+    const response = await fetch(GOOGLE_AI_API_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: googleAiHeaders(apiKey),
       body: JSON.stringify({
         contents: [{ parts: [{ text: OCR_PROMPT }, { inlineData: { mimeType: "image/jpeg", data: imageBase64 } }] }],
         generationConfig: {

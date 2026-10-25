@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import journal from "@/drizzle/meta/_journal.json";
-import { GOOGLE_AI_API_URL, OCR_MODEL } from "@/lib/ocr-config";
+import { GOOGLE_AI_API_URL, OCR_MODEL, googleAiHeaders } from "@/lib/ocr-config";
 
 /**
  * The checks behind /admin.
@@ -66,9 +66,9 @@ export function checkOcrUpstream(): Promise<HealthCheck> {
       };
     }
 
-    const res = await fetch(`${GOOGLE_AI_API_URL}?key=${key}`, {
+    const res = await fetch(GOOGLE_AI_API_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: googleAiHeaders(key),
       body: JSON.stringify({
         contents: [{ parts: [{ text: "ok" }] }],
         generationConfig: { maxOutputTokens: 1 },
