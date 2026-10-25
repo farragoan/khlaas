@@ -9,7 +9,9 @@
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "check": "pnpm run typecheck && pnpm run lint && pnpm run test"
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run test",
+    "worker": "tsx scripts/worker.ts",
+    "sweep": "tsx scripts/sweep.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.2.7",
