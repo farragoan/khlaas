@@ -13,7 +13,10 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => ({}));
   const parsed = CreateTableSchema.safeParse(body);
-  const currency = parsed.success ? parsed.data.currency : "INR";
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+  const { currency } = parsed.data;
 
   const shareCode = nanoid(8);
 

@@ -11,6 +11,7 @@ import {
   SETTLED_STATUS,
   isExpired,
   isSettled,
+  lockedError,
 } from "@/lib/table-lock";
 import { and, eq, sql } from "drizzle-orm";
 
@@ -123,6 +124,18 @@ export async function PATCH(req: Request) {
   // clause so a client that has not learned to send tableId yet still works.
   if (tableId && participant.tableId !== tableId) {
     return NextResponse.json({ error: "Invalid session" }, { status: 403 });
+  }
+
+  // Names and "I'm done" marks are part of the record a settled or expired bill
+  // freezes; a session that was valid while the bill was live must not rewrite them.
+  const [table] = await db
+    .select({ status: splitTables.status })
+    .from(splitTables)
+    .where(eq(splitTables.id, participant.tableId))
+    .limit(1);
+  const locked = lockedError(table?.status);
+  if (locked) {
+    return NextResponse.json({ error: locked.error }, { status: locked.status });
   }
 
   const updates: Record<string, string | Date> = {};

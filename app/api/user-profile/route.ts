@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db/client";
 import { userProfiles } from "@/lib/db/schema";
+import { UpdateUserProfileSchema } from "@/lib/schemas";
 import { eq } from "drizzle-orm";
 
 export async function GET() {
@@ -25,8 +26,11 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json();
-  const { displayName, upiId } = body as { displayName?: string; upiId?: string };
+  const parsed = UpdateUserProfileSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+  const { displayName, upiId } = parsed.data;
 
   const existing = await db
     .select()

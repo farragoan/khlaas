@@ -73,9 +73,9 @@ export async function GET(req: Request) {
     })),
     tableParticipants.map((p) => ({ id: p.id, displayName: p.displayName })),
     tableSelections,
-    tablePayments.map((p) => ({ participantId: p.participantId, amount: parseFloat(p.amount) })),
-    parseFloat(table.tip ?? "0"),
-    table.actualPaidTotal ? parseFloat(table.actualPaidTotal) : null
+    tablePayments.map((p) => ({ participantId: p.participantId, amount: p.amount })),
+    table.tip ?? "0",
+    table.actualPaidTotal
   );
 
   const nameById = new Map(tableParticipants.map((p) => [p.id, p.displayName]));

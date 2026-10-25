@@ -1,0 +1,19 @@
+[Unit]
+Description=khlaas pg-boss worker (retryable app jobs + scheduled sweeps)
+After=network-online.target postgresql.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/khlaas
+LoadCredentialEncrypted=database-url:/etc/khlaas/database-url.cred
+ExecStart=/bin/sh -c 'DATABASE_URL="$(cat "$CREDENTIALS_DIRECTORY/database-url")" exec /usr/bin/pnpm worker'
+Restart=on-failure
+RestartSec=5
+User=khlaas
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

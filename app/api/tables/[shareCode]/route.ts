@@ -5,7 +5,8 @@ import { eq } from "drizzle-orm";
 import { verifyHost, hashToken } from "@/lib/auth";
 import { publicTable, publicParticipant, findHostId } from "@/lib/public-view";
 import { auth } from "@clerk/nextjs/server";
-import { MAX_MONEY } from "@/lib/schemas";
+import { UpdateTableSchema } from "@/lib/schemas";
+import { paiseToString, toPaise } from "@/lib/money";
 import { EXPIRED_ERROR, EXPIRED_STATUS, isExpired } from "@/lib/table-lock";
 
 export async function GET(
@@ -115,34 +116,29 @@ export async function PATCH(
     return NextResponse.json({ error: "Only the host can update the table" }, { status: 403 });
   }
 
-  const body = await req.json().catch(() => null);
-  if (!body || typeof body !== "object") {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  const parsed = UpdateTableSchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
+  const body = parsed.data;
   const updates: Record<string, unknown> = {};
 
-  if (body.currency && typeof body.currency === "string" && body.currency.length === 3) {
-    updates.currency = body.currency;
-  }
-
-  if (body.paymentMode && ["host", "split"].includes(body.paymentMode)) {
-    updates.paymentMode = body.paymentMode;
-  }
+  if (body.currency) updates.currency = body.currency.toUpperCase();
+  if (body.paymentMode) updates.paymentMode = body.paymentMode;
 
   if (body.actualPaidTotal === null) {
     updates.actualPaidTotal = null;
-  } else if (typeof body.actualPaidTotal === "number" && Number.isFinite(body.actualPaidTotal) && body.actualPaidTotal >= 0 && body.actualPaidTotal <= MAX_MONEY) {
+  } else if (body.actualPaidTotal !== undefined) {
     const tableItems = await db.select().from(items).where(eq(items.tableId, table.id));
-    const billTotal = tableItems.reduce((sum, i) => sum + parseFloat(i.totalPrice ?? "0"), 0);
-    if (billTotal > 0 && body.actualPaidTotal > billTotal) {
+    const billPaise = tableItems.reduce((sum, i) => sum + toPaise(i.totalPrice ?? "0"), 0);
+    const requested = toPaise(body.actualPaidTotal);
+    if (billPaise > 0 && requested > billPaise) {
       return NextResponse.json(
         { error: "actualPaidTotal cannot exceed the original bill total" },
         { status: 400 }
       );
     }
-    updates.actualPaidTotal = String(body.actualPaidTotal);
-  } else if (typeof body.actualPaidTotal === "string" && body.actualPaidTotal === "") {
-    updates.actualPaidTotal = null;
+    updates.actualPaidTotal = paiseToString(requested);
   }
 
   if (Object.keys(updates).length === 0) {

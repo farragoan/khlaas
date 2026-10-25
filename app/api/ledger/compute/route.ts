@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
-import { splitTables, items, participants, selections, ledgerEntries, payments } from "@/lib/db/schema";
+import { splitTables, items, participants, selections, payments, ledgerEntries } from "@/lib/db/schema";
 import { ComputeLedgerSchema } from "@/lib/schemas";
 import { verifyHost } from "@/lib/auth";
 import { auth } from "@clerk/nextjs/server";
-import { and, eq, notInArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { computeLedger } from "@/lib/ledger/compute";
-import { EXPIRED_ERROR, EXPIRED_STATUS, isExpired } from "@/lib/table-lock";
+import { EXPIRED_ERROR, EXPIRED_STATUS, isExpired, isSettled } from "@/lib/table-lock";
+import { settleTable } from "@/lib/settle";
+import { paiseToString, toPaise } from "@/lib/money";
 
 export async function POST(req: Request) {
   const sessionToken = req.headers.get("x-session-token");
@@ -45,7 +47,7 @@ export async function POST(req: Request) {
   // Settle is idempotent: a double-tap, a second tab or a retry after a timeout
   // must not write a second set of transfers or rewrite the tip. Re-open is the
   // only way back to an editable bill.
-  if (table.status === "settled") {
+  if (isSettled(table.status)) {
     return alreadySettled(tableId);
   }
 
@@ -80,7 +82,7 @@ export async function POST(req: Request) {
   }
 
   // Validate: all participants must have a payment entry
-  const paymentMap = new Map(tablePayments.map((p) => [p.participantId, parseFloat(p.amount)]));
+  const paymentMap = new Map(tablePayments.map((p) => [p.participantId, toPaise(p.amount)]));
   const missingPayments = tableParticipants.filter(
     (p) => !paymentMap.has(p.id)
   );
@@ -116,25 +118,32 @@ export async function POST(req: Request) {
 
   const ledgerPayments = tablePayments.map((p) => ({
     participantId: p.participantId,
-    amount: parseFloat(p.amount),
+    amount: p.amount, // NUMERIC string; computeLedger reads it as exact paise
   }));
 
-  const actualPaidTotal = table.actualPaidTotal ? parseFloat(table.actualPaidTotal) : null;
+  const results = computeLedger(
+    ledgerItems,
+    ledgerParticipants,
+    tableSelections,
+    ledgerPayments,
+    tip,
+    table.actualPaidTotal
+  );
 
-  const results = computeLedger(ledgerItems, ledgerParticipants, tableSelections, ledgerPayments, tip, actualPaidTotal);
-
-  // Claim the table: only one request can flip it to settled. neon-http has no
-  // interactive transactions, so the claim is a single conditional UPDATE and
-  // the entries go in as one multi-row INSERT (atomic by itself). If that
-  // insert fails the claim is rolled back by hand so the bill is not left
-  // settled with no transfers.
-  const claimed = await db
-    .update(splitTables)
-    .set({ status: "settled", tip: String(tip) })
-    .where(and(eq(splitTables.id, tableId), notInArray(splitTables.status, ["settled", "expired"])))
-    .returning({ id: splitTables.id });
-
-  if (claimed.length === 0) {
+  // Claim the table and write the ledger in one atomic statement (settleTable).
+  // The status read above is only a fast path; the claim inside settleTable is
+  // what makes a double-submit safe, and status + ledger can never diverge.
+  const settled = await settleTable(db, {
+    tableId,
+    tip: paiseToString(toPaise(tip)),
+    entries: results.map((r) => ({
+      fromParticipant: r.fromParticipant,
+      toParticipant: r.toParticipant,
+      amount: paiseToString(toPaise(r.amount)),
+    })),
+  });
+  if (!settled) {
+    // Lost the race (or it expired meanwhile): report what the bill is now.
     const [current] = await db
       .select({ status: splitTables.status })
       .from(splitTables)
@@ -144,30 +153,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: EXPIRED_ERROR }, { status: EXPIRED_STATUS });
     }
     return alreadySettled(tableId);
-  }
-
-  if (results.length > 0) {
-    try {
-      await db.insert(ledgerEntries).values(
-        results.map((r) => ({
-          tableId,
-          fromParticipant: r.fromParticipant,
-          toParticipant: r.toParticipant,
-          amount: String(r.amount),
-        }))
-      );
-    } catch (err) {
-      console.error("ledger insert failed, releasing settle claim:", err);
-      try {
-        await db
-          .update(splitTables)
-          .set({ status: table.status })
-          .where(and(eq(splitTables.id, tableId), eq(splitTables.status, "settled")));
-      } catch (revertErr) {
-        console.error("failed to release settle claim, table left settled without entries:", revertErr);
-      }
-      return NextResponse.json({ error: "Could not settle the bill. Please try again" }, { status: 500 });
-    }
   }
 
   return NextResponse.json({ ok: true, entries: results });

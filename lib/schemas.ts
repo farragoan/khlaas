@@ -8,6 +8,18 @@ import { z } from "zod";
  */
 export const MAX_MONEY = 10_000_000;
 
+/**
+ * A money amount in currency units: finite, non-negative, at most two decimal
+ * places, and no larger than MAX_MONEY. Anything else is a 400, never a
+ * silent rounding.
+ */
+export const MoneySchema = z
+  .number()
+  .finite()
+  .nonnegative()
+  .max(MAX_MONEY)
+  .refine((n) => Math.abs(n * 100 - Math.round(n * 100)) < 1e-6, "at most 2 decimal places");
+
 export const CreateTableSchema = z.object({
   currency: z.string().length(3).default("INR"),
 });
@@ -53,10 +65,25 @@ export const ProcessReceiptSchema = z.object({
 export const PaymentSchema = z.object({
   tableId: z.string().uuid(),
   participantId: z.string().uuid(),
-  amount: z.number().finite().nonnegative().max(MAX_MONEY),
+  amount: MoneySchema,
 });
 
 export const ComputeLedgerSchema = z.object({
   tableId: z.string().uuid(),
-  tip: z.number().finite().nonnegative().max(MAX_MONEY).default(0),
+  tip: MoneySchema.default(0),
+});
+
+export const UpdateTableSchema = z.object({
+  currency: z.string().regex(/^[A-Za-z]{3}$/).optional(),
+  paymentMode: z.enum(["host", "split"]).optional(),
+  // null or "" clears the discount.
+  actualPaidTotal: z
+    .union([MoneySchema, z.literal(""), z.null()])
+    .transform((v) => (v === "" ? null : v))
+    .optional(),
+});
+
+export const UpdateUserProfileSchema = z.object({
+  displayName: z.string().trim().min(1).max(50).optional(),
+  upiId: z.string().trim().max(100).optional(),
 });

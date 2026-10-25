@@ -14,7 +14,9 @@
     "db:down": "dbmate down",
     "db:status": "dbmate status",
     "db:new": "dbmate new",
-    "db:check": "bash scripts/db-check.sh"
+    "db:check": "bash scripts/db-check.sh",
+    "worker": "tsx scripts/worker.ts",
+    "sweep": "tsx scripts/sweep.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.2.7",
@@ -27,22 +29,26 @@
     "@upstash/redis": "^1.38.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dinero.js": "2.0.2",
     "drizzle-orm": "^0.45.2",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.8.0",
-    "nanoid": "^5.1.7",
-    "next": "16.2.9",
+    "nanoid": "^5.1.16",
+    "next": "16.4.3",
     "next-themes": "^0.4.6",
-    "posthog-js": "^1.418.1",
+    "pg": "8.23.1",
+    "pg-boss": "12.38.0",
+    "posthog-js": "^1.438.21",
     "posthog-node": "^5.49.1",
     "qrcode.react": "^4.2.0",
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0",
-    "zod": "^4.3.6"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.11",
     "@netlify/functions": "^5.3.0",
     "@netlify/plugin-nextjs": "^5.15.9",
     "@tailwindcss/postcss": "^4",
@@ -50,15 +56,18 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/coverage-v8": "^4.1.4",
     "dbmate": "2.37.0",
     "eslint": "^9",
-    "eslint-config-next": "16.2.9",
+    "eslint-config-next": "16.4.3",
+    "fast-check": "^4.10.2",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^4.1.4"
   },
@@ -66,7 +75,13 @@
     "onlyBuiltDependencies": [
       "dbmate",
       "esbuild"
-    ]
+    ],
+    "overrides": {
+      "dompurify": "^3.4.17",
+      "postcss": "^8.5.31",
+      "sharp": "^0.35.5",
+      "source-map-js": "^1.2.2"
+    }
   },
   "packageManager": "pnpm@10.33.0"
 }

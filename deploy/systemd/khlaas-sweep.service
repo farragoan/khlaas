@@ -1,0 +1,15 @@
+[Unit]
+Description=khlaas housekeeping sweep (expire tables, revoke stale sessions)
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/khlaas
+# DATABASE_URL via systemd-creds: systemd-creds encrypt --name=database-url - database-url.cred
+LoadCredentialEncrypted=database-url:/etc/khlaas/database-url.cred
+ExecStart=/bin/sh -c 'DATABASE_URL="$(cat "$CREDENTIALS_DIRECTORY/database-url")" exec /usr/bin/pnpm sweep'
+User=khlaas
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes

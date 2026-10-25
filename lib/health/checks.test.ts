@@ -53,6 +53,23 @@ function mockFetch(impl: (url: string) => FakeResponse) {
 }
 
 describe("checkOcrUpstream", () => {
+  it("sends the Gemini key in a header, never in the URL", async () => {
+    process.env.GOOGLE_AI_STUDIO_API_KEY = "secret-key-123";
+    let seenUrl = "";
+    let seenInit: RequestInit | undefined;
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+      seenUrl = String(url);
+      seenInit = init;
+      return { ok: true, status: 200, json: async () => ({}), text: async () => "" } as Response;
+    }));
+
+    await checkOcrUpstream();
+
+    expect(seenUrl).not.toContain("secret-key-123");
+    expect(seenUrl).not.toContain("key=");
+    expect((seenInit?.headers as Record<string, string>)["x-goog-api-key"]).toBe("secret-key-123");
+  });
+
   it("fails loudly when the pinned model has been retired", async () => {
     process.env.GOOGLE_AI_STUDIO_API_KEY = "test-key";
     mockFetch(() => ({

@@ -34,3 +34,12 @@ export function isSettled(status: string | null | undefined): boolean {
 export function acceptsSelectionWrites(status: string | null | undefined): boolean {
   return !isExpired(status) && !isSettled(status);
 }
+
+/** Selections and participant edits are refused on expired and settled bills. */
+export function lockedError(
+  status: string | null | undefined
+): { error: string; status: number } | null {
+  if (isExpired(status)) return { error: EXPIRED_ERROR, status: EXPIRED_STATUS };
+  if (isSettled(status)) return { error: SETTLED_ERROR, status: SETTLED_STATUS };
+  return null;
+}
