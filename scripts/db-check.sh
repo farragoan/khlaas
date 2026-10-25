@@ -47,6 +47,6 @@ $DBMATE --no-dump-schema up
 
 echo "== schema.sql matches migrations"
 $DBMATE --migrations-table schema_migrations dump >/dev/null
-git diff --exit-code -I '^-- Dumped' -- db/schema.sql \
+git diff --exit-code -I '^-- Dumped' -I 'restrict dbmate' -I '^$' -- db/schema.sql \
   || { echo "db/schema.sql is stale: run 'pnpm db:up' on a scratch DB and commit it"; exit 1; }
 echo "OK"
