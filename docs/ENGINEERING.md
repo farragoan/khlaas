@@ -60,11 +60,13 @@ against columns that did not exist, and the workaround was a `.catch()` in
 Separately, a missing unique index let 9 duplicate `(table_id, user_id)` pairs
 accumulate, silently corrupting the ledger on three real bills.
 
-- Generate migrations with `drizzle-kit generate`. Never hand-write a `.sql`
-  file into `drizzle/` — it will not be journalled. CI now fails if the counts
-  disagree.
+- Migrations are dbmate files in `db/migrations/` (`pnpm db:new <name>`), each
+  with an up and a down. `db/schema.sql` is the dumped result. CI applies, rolls
+  back and re-applies them on a scratch Postgres and fails if `schema.sql` is
+  stale. Update `lib/db/schema.ts` by hand to match (drizzle is the query layer
+  only now). See docs/migrations.md.
 - A schema change is not done until it is applied to the database. Check
-  `drizzle.__drizzle_migrations` before assuming.
+  `pnpm db:status` (table `schema_migrations`) before assuming.
 - **Never paper over a missing column with a fallback query.** If the code needs
   a column the DB does not have, the deploy is broken — fail loudly and migrate.
 - Constraints that protect money (unique, check, FK) go in the schema, not in

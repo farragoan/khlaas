@@ -1,3 +1,6 @@
+-- OBSOLETE design sketch (ElectricSQL era), not the live schema.
+-- The real schema is db/schema.sql, produced by db/migrations (dbmate).
+--
 -- khlaas database schema
 -- Target: Neon (serverless PostgreSQL)
 -- Real-time sync: ElectricSQL (reads shape subscriptions from logical replication)

@@ -1,1 +1,0 @@
-ALTER TABLE participants ADD COLUMN splits_submitted_at timestamp with time zone;

@@ -7,8 +7,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const dbExecute = vi.fn();
 vi.mock("@/lib/db/client", () => ({ db: { execute: (...a: unknown[]) => dbExecute(...a) } }));
-vi.mock("@/drizzle/meta/_journal.json", () => ({
-  default: { entries: [{ tag: "a" }, { tag: "b" }, { tag: "c" }] },
+vi.mock("@/lib/health/migration-versions", () => ({
+  MIGRATION_VERSIONS: ["a", "b", "c"],
 }));
 
 import {
@@ -100,7 +100,7 @@ describe("checkDatabase", () => {
     expect(check.remedy).toMatch(/pending/i);
   });
 
-  it("passes when applied count matches the journal", async () => {
+  it("passes when applied count matches db/migrations", async () => {
     dbExecute.mockResolvedValue([{ applied: 3 }]);
     expect((await checkDatabase()).status).toBe("ok");
   });

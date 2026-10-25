@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import journal from "@/drizzle/meta/_journal.json";
+import { MIGRATION_VERSIONS } from "@/lib/health/migration-versions";
 import { GOOGLE_AI_API_URL, OCR_MODEL } from "@/lib/ocr-config";
 
 /**
@@ -12,7 +12,7 @@ import { GOOGLE_AI_API_URL, OCR_MODEL } from "@/lib/ocr-config";
  *  - upstream:  is the pinned OCR model still callable?  (it was retired under
  *               us and every receipt scan 502'd for days)
  *  - database:  do the migrations on disk match the ones actually applied?
- *               (files existed that were never journalled, so the app ran
+ *               (files existed that were never registered, so the app ran
  *               against a schema it did not have)
  *  - tests:     did the suite actually run, and on the commit that is deployed?
  *  - reporting: is error collection wired up, and does the pipe accept events?
@@ -99,27 +99,27 @@ export function checkOcrUpstream(): Promise<HealthCheck> {
 export function checkDatabase(): Promise<HealthCheck> {
   return timed("database", "Database & migrations", async () => {
     const rows = (await db.execute(
-      sql`SELECT count(*)::int AS applied FROM drizzle.__drizzle_migrations`
+      sql`SELECT count(*)::int AS applied FROM schema_migrations`
     )) as unknown as { rows?: { applied: number }[] } | { applied: number }[];
 
     const list = Array.isArray(rows) ? rows : (rows.rows ?? []);
     const applied = list[0]?.applied ?? 0;
-    const expected = journal.entries.length;
+    const expected = MIGRATION_VERSIONS.length;
 
     if (applied === expected) {
       return {
         status: "ok" as const,
-        summary: `${applied} migrations applied, matching the journal`,
+        summary: `${applied} migrations applied, matching db/migrations`,
         detail: { applied, expected },
       };
     }
     return {
       status: "fail" as const,
-      summary: `${applied} migrations applied but the journal lists ${expected}`,
+      summary: `${applied} migrations applied but db/migrations has ${expected}`,
       detail: { applied, expected },
       remedy:
         applied < expected
-          ? "Migrations are pending. The app may be querying columns the database does not have — run drizzle-kit migrate."
+          ? "Migrations are pending. The app may be querying columns the database does not have — run pnpm db:up."
           : "The database is ahead of this build. A deploy may have been rolled back.",
     };
   });
