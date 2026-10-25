@@ -1,24 +1,22 @@
 import type { Config } from "@netlify/functions";
 import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
+import { expireStaleSessions, expireTables } from "../../lib/jobs/sweeps";
 
-export default async function () {
+// Platform cron for the Netlify deployment. The sweeps themselves live in
+// lib/jobs/sweeps.ts and are shared with the pg-boss worker (scripts/worker.ts)
+// and the systemd one-shot (scripts/sweep.ts) used on the self-hosted box.
+export default async function handler() {
   const url = process.env.DATABASE_URL;
   if (!url) return { statusCode: 500, body: "DATABASE_URL not set" };
 
-  const sql = neon(url);
-  const expired = await sql`
-    UPDATE split_tables
-    SET status = 'expired'
-    WHERE status NOT IN ('expired', 'settled')
-      AND (
-        (expires_at IS NOT NULL AND expires_at < NOW())
-        OR (expires_at IS NULL AND created_at < NOW() - INTERVAL '24 hours')
-      )
-    RETURNING id
-  `;
+  const db = drizzle(neon(url));
+  const expired = await expireTables(db);
+  const revoked = await expireStaleSessions(db);
 
-  console.log(`Expired ${expired.length} tables`);
-  return { statusCode: 200, body: `Expired ${expired.length} tables` };
+  const body = `Expired ${expired} tables, revoked ${revoked} stale sessions`;
+  console.log(body);
+  return { statusCode: 200, body };
 }
 
 export const config: Config = {
