@@ -18,7 +18,8 @@ export interface LedgerSelection {
 
 export interface LedgerPayment {
   participantId: string;
-  amount: number;
+  /** NUMERIC string straight from the DB (preferred) or a number of currency units. */
+  amount: number | string;
 }
 
 export interface LedgerResult {
