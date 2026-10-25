@@ -1,0 +1,17 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "schedule": ["before 6am on monday"],
+  "timezone": "Asia/Kolkata",
+  "automerge": false,
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "minimumReleaseAge": "3 days",
+  "lockFileMaintenance": { "enabled": true, "schedule": ["before 6am on monday"], "automerge": false },
+  "vulnerabilityAlerts": { "labels": ["security"], "schedule": ["at any time"], "automerge": false },
+  "packageRules": [
+    { "description": "Group all non-major npm updates", "matchManagers": ["npm"], "matchUpdateTypes": ["minor", "patch"], "groupName": "npm non-major", "automerge": false },
+    { "description": "Majors stay separate for review", "matchManagers": ["npm"], "matchUpdateTypes": ["major"], "automerge": false },
+    { "description": "Group GitHub Actions digest/version bumps", "matchManagers": ["github-actions"], "groupName": "github-actions", "automerge": false }
+  ]
+}
