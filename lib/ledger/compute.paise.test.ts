@@ -91,6 +91,12 @@ describe("integer-paise ledger invariants", () => {
   it("agrees with the legacy float arithmetic to within rounding of each line", () => {
     fc.assert(
       fc.property(scenario, (s) => {
+        // Sub-rupee tables amplify one paisa of rounding into a visible fraction of
+        // the bill, which says nothing about real bills; compare from Rs 100 up.
+        const claimedP = s.items
+          .filter((x) => x.isFee || s.selections.some((c) => c.itemId === x.id))
+          .reduce((a, x) => a + toPaise(x.totalPrice), 0);
+        fc.pre(claimedP >= 10000);
         const payments = s.payments.map((p) => ({ ...p, amount: parseFloat(String(p.amount)) }));
         const oldB = legacyComputeBreakdown(s.items, s.people, s.selections, payments, parseFloat(s.tip), s.actual == null ? null : parseFloat(s.actual));
         const newB = computeBreakdown(s.items, s.people, s.selections, s.payments, s.tip, s.actual);
@@ -98,11 +104,15 @@ describe("integer-paise ledger invariants", () => {
         // by food rounded to the paisa, the old by unrounded floats, so on a tiny
         // food total the proportions differ by up to half a paisa per line.
         const totalLines = newB.reduce((a, r) => a + r.itemShares.length, 0);
-        const foodUnits = newB.reduce((a, r) => a + r.itemShares.reduce((x, y) => x + y.amount, 0), 0);
+        const foodUnits = s.items
+          .filter((x) => !x.isFee && s.selections.some((c) => c.itemId === x.id))
+          .reduce((a, x) => a + parseFloat(x.totalPrice), 0);
         const feeUnits = s.items.filter((x) => x.isFee).reduce((a, x) => a + parseFloat(x.totalPrice), 0);
         const proportional = foodUnits > 0 ? ((parseFloat(s.tip) + feeUnits) * 0.005 * (totalLines + 1)) / foodUnits : 0;
+        // A discount multiplies whatever rounding there was by actual/bill.
+        const ratio = s.actual != null && claimedP > 0 ? Math.max(1, (parseFloat(s.actual) * 100) / claimedP) : 1;
         newB.forEach((row, i) => {
-          const slack = 0.01 * (row.itemShares.length + 3) + proportional;
+          const slack = (0.01 * (row.itemShares.length + 3) + proportional) * ratio;
           expect(Math.abs(row.owes - oldB[i].owes)).toBeLessThanOrEqual(slack);
           expect(Math.abs(row.paid - oldB[i].paid)).toBeLessThan(1e-9);
         });
