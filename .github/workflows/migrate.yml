@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "drizzle/**"
+      - "db/migrations/**"
 
 jobs:
   migrate:
@@ -28,6 +28,10 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: npx drizzle-kit migrate
+      # PREREQUISITE: production must be bootstrapped once (see docs/migrations.md),
+      # otherwise dbmate tries to run 0000 against existing tables. That fails
+      # safe (each migration is one transaction) but the job goes red.
+      - run: pnpm run db:up
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DBMATE_NO_DUMP_SCHEMA: "true"

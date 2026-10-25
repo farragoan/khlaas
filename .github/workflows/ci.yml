@@ -11,6 +11,15 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s
+          --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -38,15 +47,15 @@ jobs:
         run: pnpm run lint
         continue-on-error: true
 
-      # A migration that exists as a file but was never registered in the
-      # journal applies to nobody, and the app then runs against a schema it
-      # does not have. That happened once; this makes it a build failure.
-      - name: Migration files and journal agree
+      # Migrations are dbmate files in db/migrations. This lints them and, against
+      # a throwaway Postgres service (localhost only; the script refuses any other
+      # host), proves up -> full rollback -> up and that db/schema.sql is not stale.
+      - name: Install pg_dump 16 (dbmate schema dump)
         run: |
-          files=$(ls drizzle/*.sql | wc -l | tr -d ' ')
-          entries=$(node -e "console.log(require('./drizzle/meta/_journal.json').entries.length)")
-          echo "sql files: $files, journal entries: $entries"
-          if [ "$files" != "$entries" ]; then
-            echo "::error::$files migration files but $entries journal entries — run drizzle-kit generate, do not hand-write .sql"
-            exit 1
-          fi
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-16
+      - name: Migrations apply, roll back and re-apply; schema.sql current
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/khlaas_ci?sslmode=disable
+          PATH_PG: /usr/lib/postgresql/16/bin
+        run: PATH="$PATH_PG:$PATH" bash scripts/db-check.sh

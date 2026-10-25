@@ -18,8 +18,8 @@ The six that get violated most:
    names, endpoints, env vars. Appearing in a `/models` listing is not proof it
    is callable.
 3. **Never paper over a missing DB column with a fallback query.** Migrate, or
-   fail loudly. Generate migrations with `drizzle-kit generate` — a hand-written
-   `.sql` is not journalled and applies to nobody.
+   fail loudly. Schema changes are dbmate files: `pnpm db:new name`, write
+   `-- migrate:up` and `-- migrate:down`, see docs/migrations.md.
 4. **Money math gets a test in both directions.** Dropping a real charge costs
    as much as keeping a fake one.
 5. **A state guard on some write routes is not a lock.** Enumerate every route

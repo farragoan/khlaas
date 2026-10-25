@@ -8,11 +8,10 @@ Items that need your input or manual steps before features work correctly.
 
 The `split_tables.status` column now allows `'editing'`. The existing database has a CHECK constraint that doesn't include it.
 
-Run this once to push the updated schema:
-
-```bash
-npx drizzle-kit push
-```
+Already included in the initial schema migration (`status_check` in
+`db/migrations/20260426000000_initial_schema.sql`). If your database still has
+the older constraint, see docs/migrations.md. `drizzle-kit push` is no longer
+used; do not run it against production.
 
 Until this is run, any call to the `reopen` API will fail with a DB constraint error.
 

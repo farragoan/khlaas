@@ -1,3 +1,4 @@
+-- migrate:up
 -- One Clerk user gets one participant row per table.
 --
 -- The auto-join effect in app/t/[shareCode]/page.tsx fires whenever a signed-in
@@ -32,7 +33,7 @@ WHERE s."participant_id" = d."id"
     SELECT 1 FROM "selections" k
     WHERE k."participant_id" = d."keeper_id" AND k."item_id" = s."item_id"
   );
---> statement-breakpoint
+
 
 -- payments: same shape, guarded by the (table_id, participant_id) unique index.
 UPDATE "payments" p
@@ -51,7 +52,7 @@ WHERE p."participant_id" = d."id"
     SELECT 1 FROM "payments" k
     WHERE k."table_id" = p."table_id" AND k."participant_id" = d."keeper_id"
   );
---> statement-breakpoint
+
 
 -- ledger_entries: no ON DELETE, so these must be repointed, not orphaned.
 UPDATE "ledger_entries" l
@@ -62,7 +63,7 @@ FROM (
   WINDOW w AS (PARTITION BY table_id, user_id ORDER BY joined_at ASC, id ASC)
 ) d
 WHERE l."from_participant" = d."id" AND d."id" <> d."keeper_id";
---> statement-breakpoint
+
 
 UPDATE "ledger_entries" l
 SET "to_participant" = d."keeper_id"
@@ -72,11 +73,11 @@ FROM (
   WINDOW w AS (PARTITION BY table_id, user_id ORDER BY joined_at ASC, id ASC)
 ) d
 WHERE l."to_participant" = d."id" AND d."id" <> d."keeper_id";
---> statement-breakpoint
+
 
 -- Repointing can collapse a debt onto a single person; that entry is meaningless.
 DELETE FROM "ledger_entries" WHERE "from_participant" = "to_participant";
---> statement-breakpoint
+
 
 -- Remaining selections/payments on the losing rows cascade with the delete.
 DELETE FROM "participants" p
@@ -87,10 +88,15 @@ USING (
   ) r WHERE r.rn > 1
 ) losers
 WHERE p."id" = losers."id";
---> statement-breakpoint
+
 
 -- Partial: guest rows carry user_id IS NULL and must stay unconstrained, since
 -- NULL never equals NULL and an unfiltered index would still admit them anyway.
 CREATE UNIQUE INDEX IF NOT EXISTS "participants_table_user_unique"
   ON "participants" ("table_id","user_id")
   WHERE "user_id" IS NOT NULL;
+
+-- migrate:down
+-- The dedupe in the up step deleted rows and repointed FKs; that is NOT reversible.
+-- Down only drops the guard index.
+DROP INDEX "participants_table_user_unique";
