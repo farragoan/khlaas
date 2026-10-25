@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { splitTables, items, participants, selections, ledgerEntries, payments } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import { verifyHost } from "@/lib/auth";
+import { and, eq } from "drizzle-orm";
+import { verifyHost, hashToken } from "@/lib/auth";
+import { toPublicTable, redactParticipants } from "@/lib/public-table";
 import { auth } from "@clerk/nextjs/server";
+import { UpdateTableSchema } from "@/lib/schemas";
+import { paiseToString, toPaise } from "@/lib/money";
 import { EXPIRED_ERROR, EXPIRED_STATUS, isExpired } from "@/lib/table-lock";
 
 export async function GET(
@@ -71,17 +74,34 @@ export async function GET(
   const { userId } = await auth();
   const hostParticipant = await verifyHost(table.id, { sessionToken, clerkUserId: userId });
 
+  // Who is looking? upiId is only for people at the table: the host, a guest
+  // whose session token matches a participant here, or a signed-in participant.
+  let viewerIsParticipant = !!hostParticipant;
+  if (!viewerIsParticipant && sessionToken) {
+    const [match] = await db
+      .select({ id: participants.id })
+      .from(participants)
+      .where(and(eq(participants.tableId, table.id), eq(participants.sessionToken, hashToken(sessionToken))))
+      .limit(1);
+    viewerIsParticipant = !!match;
+  }
+  if (!viewerIsParticipant && userId) {
+    viewerIsParticipant = tableParticipants.some((p) => p.userId === userId);
+  }
+
   const response = NextResponse.json({
-    table,
+    table: toPublicTable(table),
     items: tableItems,
-    participants: tableParticipants,
+    participants: redactParticipants(tableParticipants, viewerIsParticipant),
     selections: tableSelections,
     payments: tablePayments,
     ledger: tableLedger,
     isHost: !!hostParticipant,
   });
 
-  response.headers.set("Cache-Control", "public, s-maxage=2, stale-while-revalidate=5");
+  // The body now depends on who asks (upiId, isHost), so a shared cache must
+  // never serve one viewer's copy to another.
+  response.headers.set("Cache-Control", "private, no-store");
 
   return response;
 }
@@ -116,31 +136,29 @@ export async function PATCH(
     return NextResponse.json({ error: "Only the host can update the table" }, { status: 403 });
   }
 
-  const body = await req.json();
+  const parsed = UpdateTableSchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+  const body = parsed.data;
   const updates: Record<string, unknown> = {};
 
-  if (body.currency && typeof body.currency === "string" && body.currency.length === 3) {
-    updates.currency = body.currency;
-  }
-
-  if (body.paymentMode && ["host", "split"].includes(body.paymentMode)) {
-    updates.paymentMode = body.paymentMode;
-  }
+  if (body.currency) updates.currency = body.currency.toUpperCase();
+  if (body.paymentMode) updates.paymentMode = body.paymentMode;
 
   if (body.actualPaidTotal === null) {
     updates.actualPaidTotal = null;
-  } else if (typeof body.actualPaidTotal === "number" && body.actualPaidTotal >= 0) {
+  } else if (body.actualPaidTotal !== undefined) {
     const tableItems = await db.select().from(items).where(eq(items.tableId, table.id));
-    const billTotal = tableItems.reduce((sum, i) => sum + parseFloat(i.totalPrice ?? "0"), 0);
-    if (billTotal > 0 && body.actualPaidTotal > billTotal) {
+    const billPaise = tableItems.reduce((sum, i) => sum + toPaise(i.totalPrice ?? "0"), 0);
+    const requested = toPaise(body.actualPaidTotal);
+    if (billPaise > 0 && requested > billPaise) {
       return NextResponse.json(
         { error: "actualPaidTotal cannot exceed the original bill total" },
         { status: 400 }
       );
     }
-    updates.actualPaidTotal = String(body.actualPaidTotal);
-  } else if (typeof body.actualPaidTotal === "string" && body.actualPaidTotal === "") {
-    updates.actualPaidTotal = null;
+    updates.actualPaidTotal = paiseToString(requested);
   }
 
   if (Object.keys(updates).length === 0) {

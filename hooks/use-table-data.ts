@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import type { Item, Participant, SplitTable, LedgerEntry, Payment } from "@/lib/db/schema";
+import type { Item, Participant, LedgerEntry, Payment } from "@/lib/db/schema";
+import type { PublicSplitTable } from "@/lib/public-table";
 
 export interface Selection {
   participantId: string;
@@ -12,7 +13,7 @@ export interface Selection {
 export type PublicParticipant = Omit<Participant, "sessionToken"> & { upiId: string | null };
 
 export interface TableData {
-  table: SplitTable;
+  table: PublicSplitTable;
   items: Item[];
   participants: PublicParticipant[];
   selections: Selection[];

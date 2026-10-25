@@ -4,11 +4,12 @@ import Link from "next/link";
 import { Clock, Lock } from "lucide-react";
 import { Price } from "@/components/price";
 import { ByPersonView } from "@/components/by-person-view";
-import type { Item, Payment, SplitTable } from "@/lib/db/schema";
+import type { Item, Payment } from "@/lib/db/schema";
+import type { PublicSplitTable } from "@/lib/public-table";
 import type { Selection, PublicParticipant } from "@/hooks/use-table-data";
 
 interface ExpiredBillViewProps {
-  table: SplitTable;
+  table: PublicSplitTable;
   items: Item[];
   participants: PublicParticipant[];
   selections: Selection[];
