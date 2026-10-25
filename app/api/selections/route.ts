@@ -5,6 +5,7 @@ import { AddSelectionSchema, UpdateSelectionSchema, RemoveSelectionSchema } from
 import { eq, and, asc, sql } from "drizzle-orm";
 import { hashToken } from "@/lib/auth";
 import { auth } from "@clerk/nextjs/server";
+import { lockedError } from "@/lib/table-lock";
 
 /**
  * Validate that the session is allowed to write a selection for `participantId` on `itemId`.
@@ -15,12 +16,39 @@ import { auth } from "@clerk/nextjs/server";
  * Host-override case (editing/items_ready): the session token belongs to the table's host
  * (participants[0]) and the table is currently in `editing` or `items_ready` status.
  */
+type SessionCheck = { ok: true } | { ok: false; error: string; status: number };
+const INVALID: SessionCheck = { ok: false, error: "Invalid session", status: 403 };
+
+/**
+ * The frozen-bill guard runs before every path below, including the direct
+ * token match: an expired or settled bill must not be writable by a session
+ * that was valid while it was live.
+ */
 async function validateSession(
   participantId: string,
   sessionToken: string,
   itemId: string
-): Promise<boolean> {
+): Promise<SessionCheck> {
   const hashedToken = hashToken(sessionToken);
+
+  const [itemTable] = await db
+    .select({ status: splitTables.status })
+    .from(items)
+    .innerJoin(splitTables, eq(items.tableId, splitTables.id))
+    .where(eq(items.id, itemId))
+    .limit(1);
+  if (!itemTable) return INVALID;
+  const locked = lockedError(itemTable.status);
+  if (locked) return { ok: false, ...locked };
+
+  return (await checkAccess(participantId, hashedToken, itemId)) ? { ok: true } : INVALID;
+}
+
+async function checkAccess(
+  participantId: string,
+  hashedToken: string,
+  itemId: string
+): Promise<boolean> {
 
   // Fast path: direct match
   const [direct] = await db
@@ -158,9 +186,9 @@ export async function POST(req: Request) {
 
   const { participantId, itemId, quantity } = parsed.data;
 
-  const valid = await validateSession(participantId, sessionToken, itemId);
-  if (!valid) {
-    return NextResponse.json({ error: "Invalid session" }, { status: 403 });
+  const check = await validateSession(participantId, sessionToken, itemId);
+  if (!check.ok) {
+    return NextResponse.json({ error: check.error }, { status: check.status });
   }
 
   // Validate quantity doesn't exceed available
@@ -197,9 +225,9 @@ export async function PUT(req: Request) {
 
   const { participantId, itemId, quantity } = parsed.data;
 
-  const valid = await validateSession(participantId, sessionToken, itemId);
-  if (!valid) {
-    return NextResponse.json({ error: "Invalid session" }, { status: 403 });
+  const check = await validateSession(participantId, sessionToken, itemId);
+  if (!check.ok) {
+    return NextResponse.json({ error: check.error }, { status: check.status });
   }
 
   // Validate quantity doesn't exceed available
@@ -240,9 +268,9 @@ export async function DELETE(req: Request) {
 
   const { participantId, itemId } = parsed.data;
 
-  const valid = await validateSession(participantId, sessionToken, itemId);
-  if (!valid) {
-    return NextResponse.json({ error: "Invalid session" }, { status: 403 });
+  const check = await validateSession(participantId, sessionToken, itemId);
+  if (!check.ok) {
+    return NextResponse.json({ error: check.error }, { status: check.status });
   }
 
   await db
