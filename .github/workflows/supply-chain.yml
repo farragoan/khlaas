@@ -75,7 +75,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/bl" && tar -xzf bl.tar.gz -C "$RUNNER_TEMP/bl" betterleaks
           echo "$RUNNER_TEMP/bl" >> "$GITHUB_PATH"
       - name: Scan git history (secrets redacted in output)
-        run: betterleaks git --redact --no-banner .
+        run: betterleaks git --redact --no-banner -v .
 
   sbom:
     name: SBOM (Syft, CycloneDX)
