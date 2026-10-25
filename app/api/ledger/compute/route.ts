@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
-import { splitTables, items, participants, selections, ledgerEntries, payments } from "@/lib/db/schema";
+import { splitTables, items, participants, selections, payments } from "@/lib/db/schema";
 import { ComputeLedgerSchema } from "@/lib/schemas";
 import { verifyHost } from "@/lib/auth";
 import { auth } from "@clerk/nextjs/server";
 import { eq } from "drizzle-orm";
 import { computeLedger } from "@/lib/ledger/compute";
-import { EXPIRED_ERROR, EXPIRED_STATUS, isExpired } from "@/lib/table-lock";
+import { EXPIRED_ERROR, EXPIRED_STATUS, SETTLED_ERROR, SETTLED_STATUS, isExpired, isSettled } from "@/lib/table-lock";
+import { settleTable } from "@/lib/settle";
+import { paiseToString, toPaise } from "@/lib/money";
 
 export async function POST(req: Request) {
   const sessionToken = req.headers.get("x-session-token");
@@ -14,7 +16,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing session token" }, { status: 401 });
   }
 
-  const body = await req.json();
+  const body = await req.json().catch(() => null);
   const parsed = ComputeLedgerSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -40,6 +42,10 @@ export async function POST(req: Request) {
 
   if (isExpired(table.status)) {
     return NextResponse.json({ error: EXPIRED_ERROR }, { status: EXPIRED_STATUS });
+  }
+
+  if (isSettled(table.status)) {
+    return NextResponse.json({ error: SETTLED_ERROR }, { status: SETTLED_STATUS });
   }
 
   const [tableItems, tableParticipants, tablePayments] = await Promise.all([
@@ -69,7 +75,7 @@ export async function POST(req: Request) {
   }
 
   // Validate: all participants must have a payment entry
-  const paymentMap = new Map(tablePayments.map((p) => [p.participantId, parseFloat(p.amount)]));
+  const paymentMap = new Map(tablePayments.map((p) => [p.participantId, toPaise(p.amount)]));
   const missingPayments = tableParticipants.filter(
     (p) => !paymentMap.has(p.id)
   );
@@ -105,28 +111,32 @@ export async function POST(req: Request) {
 
   const ledgerPayments = tablePayments.map((p) => ({
     participantId: p.participantId,
-    amount: parseFloat(p.amount),
+    amount: p.amount, // NUMERIC string; computeLedger reads it as exact paise
   }));
 
-  const actualPaidTotal = table.actualPaidTotal ? parseFloat(table.actualPaidTotal) : null;
+  const results = computeLedger(
+    ledgerItems,
+    ledgerParticipants,
+    tableSelections,
+    ledgerPayments,
+    tip,
+    table.actualPaidTotal
+  );
 
-  const results = computeLedger(ledgerItems, ledgerParticipants, tableSelections, ledgerPayments, tip, actualPaidTotal);
-
-  // Save tip and mark table settled
-  await db
-    .update(splitTables)
-    .set({ status: "settled", tip: String(tip) })
-    .where(eq(splitTables.id, tableId));
-
-  if (results.length > 0) {
-    await db.insert(ledgerEntries).values(
-      results.map((r) => ({
-        tableId,
-        fromParticipant: r.fromParticipant,
-        toParticipant: r.toParticipant,
-        amount: String(r.amount),
-      }))
-    );
+  // Claim the table and write the ledger in one atomic statement. The status
+  // read above is only a fast path for a friendly error; the claim inside
+  // settleTable is what makes a double-submit safe.
+  const settled = await settleTable(db, {
+    tableId,
+    tip: paiseToString(toPaise(tip)),
+    entries: results.map((r) => ({
+      fromParticipant: r.fromParticipant,
+      toParticipant: r.toParticipant,
+      amount: paiseToString(toPaise(r.amount)),
+    })),
+  });
+  if (!settled) {
+    return NextResponse.json({ error: SETTLED_ERROR }, { status: SETTLED_STATUS });
   }
 
   return NextResponse.json({ ok: true, entries: results });

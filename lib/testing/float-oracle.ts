@@ -67,7 +67,7 @@ export function legacyComputeBreakdown(
   const paid: Record<string, number> = {};
   for (const p of participants) paid[p.id] = 0;
   for (const payment of payments) {
-    paid[payment.participantId] = (paid[payment.participantId] ?? 0) + payment.amount;
+    paid[payment.participantId] = (paid[payment.participantId] ?? 0) + Number(payment.amount);
   }
 
   return participants.map((p) => {
