@@ -1,0 +1,7 @@
+# Throwaway Postgres credentials used by the CI service container; not real secrets.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "CI test database placeholder credentials"
+paths = ['''^\.github/workflows/ci\.yml$''']
