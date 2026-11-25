@@ -1,15 +1,19 @@
 [Unit]
 Description=khlaas pg-boss worker (retryable app jobs + scheduled sweeps)
-After=network-online.target postgresql.service
+After=network-online.target docker.service
+Wants=network-online.target docker.service
 
 [Service]
 Type=simple
+User=khlaas
+Group=khlaas
 WorkingDirectory=/opt/khlaas
-LoadCredentialEncrypted=database-url:/etc/khlaas/database-url.cred
-ExecStart=/bin/sh -c 'DATABASE_URL="$(cat "$CREDENTIALS_DIRECTORY/database-url")" exec /usr/bin/pnpm worker'
+Environment=NODE_ENV=production
+Environment=PATH=/opt/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=/etc/khlaas/khlaas.env
+ExecStart=/opt/node/bin/node /opt/khlaas/node_modules/tsx/dist/cli.mjs /opt/khlaas/scripts/worker.ts
 Restart=on-failure
 RestartSec=5
-User=khlaas
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes

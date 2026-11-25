@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     // Agent worktrees are checkouts of this same repo. Linting them reports
     // every finding N times over and buries the one copy that matters.
     ".claude/worktrees/**",
+    // The edge Worker has its own TypeScript and test configuration.
+    "deploy/cloudflare-worker/**",
   ]),
   {
     // Keep the existing client-side patterns visible without making these

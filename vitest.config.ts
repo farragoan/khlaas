@@ -6,7 +6,11 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: "node",
-    exclude: ["**/node_modules/**", "**/.claude/worktrees/**"],
+    exclude: [
+      "**/node_modules/**",
+      "**/.claude/worktrees/**",
+      "deploy/cloudflare-worker/**",
+    ],
     coverage: {
       provider: "v8",
       include: ["lib/ledger/**"],

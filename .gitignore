@@ -2,6 +2,8 @@
 
 # dependencies
 /node_modules
+/deploy/cloudflare-worker/node_modules
+/deploy/cloudflare-worker/.wrangler
 /.pnp
 .pnp.*
 .yarn/*

@@ -1,23 +1,31 @@
 import { isIP } from "node:net";
 
 /**
- * The rate-limit identity of a caller.
+ * Return the rate-limit identity supplied by the trusted front proxy.
  *
- * `x-forwarded-for` is client-writable unless every hop strips it, so it is
- * never read. Instead we trust exactly one header that the platform in front of
- * us sets and overwrites: `x-nf-client-connection-ip` on Netlify by default,
- * or whatever TRUSTED_IP_HEADER names for another proxy (e.g. `cf-connecting-ip`
- * behind Cloudflare, `x-real-ip` behind Caddy). A missing or malformed value
- * maps to one shared "unknown" bucket, so a caller who can strip the header is
- * throttled with everyone else instead of escaping the limit.
+ * The Cloudflare Worker strips all client-provided forwarding headers and sets
+ * both `x-real-ip` and a one-hop `x-forwarded-for`. Netlify's header remains a
+ * final fallback for that platform. A missing or malformed value maps to one
+ * shared "unknown" bucket instead of letting a caller escape the limit.
  */
-export const DEFAULT_TRUSTED_IP_HEADER = "x-nf-client-connection-ip";
+export const DEFAULT_TRUSTED_IP_HEADER = "x-real-ip";
+
+function validIp(value: string | null): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed && isIP(trimmed) ? trimmed : undefined;
+}
 
 export function trustedClientIp(
   headers: Pick<Headers, "get">,
-  env: Record<string, string | undefined> = process.env
+  env: Record<string, string | undefined> = process.env,
 ): string {
-  const name = (env.TRUSTED_IP_HEADER || DEFAULT_TRUSTED_IP_HEADER).toLowerCase();
-  const value = headers.get(name)?.trim();
-  return value && isIP(value) ? value : "unknown";
+  const override = env.TRUSTED_IP_HEADER?.trim().toLowerCase();
+  if (override) return validIp(headers.get(override)) ?? "unknown";
+
+  return (
+    validIp(headers.get(DEFAULT_TRUSTED_IP_HEADER)) ??
+    validIp(headers.get("x-forwarded-for")?.split(",")[0] ?? null) ??
+    validIp(headers.get("x-nf-client-connection-ip")) ??
+    "unknown"
+  );
 }
