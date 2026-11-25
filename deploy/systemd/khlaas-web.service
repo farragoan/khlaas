@@ -11,7 +11,7 @@ WorkingDirectory=/opt/khlaas
 Environment=NODE_ENV=production
 Environment=PATH=/opt/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 EnvironmentFile=/etc/khlaas/khlaas.env
-ExecStart=/opt/node/bin/node /opt/khlaas/node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 3100
+ExecStart=/opt/node/bin/node /opt/khlaas/node_modules/next/dist/bin/next start --hostname localhost --port 3100
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=yes

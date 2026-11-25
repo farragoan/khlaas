@@ -105,8 +105,8 @@ if $FIRST_RUN; then
 fi
 
 for _ in {1..30}; do
-  if curl --fail --silent --show-error --output /dev/null http://127.0.0.1:3100/khlaas/; then
-    echo "khlaas is healthy at http://127.0.0.1:3100/khlaas/"
+  if curl --fail --silent --show-error --output /dev/null http://localhost:3100/khlaas/; then
+    echo "khlaas is healthy at http://localhost:3100/khlaas/"
     exit 0
   fi
   sleep 2

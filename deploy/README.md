@@ -1,12 +1,12 @@
 # Self-hosted deployment runbook
 
-The public URL is `https://dhruvnagpal.in/khlaas/`. Cloudflare sends matching requests through the `khlaas-edge` Worker and its VPC service to Next.js on `127.0.0.1:3100`. The web app, pg-boss worker and housekeeping sweep run as `khlaas`; PostgreSQL 16 runs in the existing `bydhruv-db` Docker container.
+The public URL is `https://dhruvnagpal.in/khlaas/`. Cloudflare sends matching requests through the `khlaas-edge` Worker and its VPC service to Next.js on `localhost:3100` (bound to `localhost`, which resolves to `::1` on jigyasa; Next must bind the same name its proxy normalises to, or Clerk rewrites become external proxies). The web app, pg-boss worker and housekeeping sweep run as `khlaas`; PostgreSQL 16 runs in the existing `bydhruv-db` Docker container.
 
 ## Prerequisites
 
 Provision Node 22 under `/opt/node/bin`, Docker, the Cloudflare Tunnel and the VPC service before deploying. Run the commands below on the Ubuntu ARM server from a git checkout as a sudo-capable user. The checkout needs an `origin` remote; alternatively set `KHLAAS_GIT_REMOTE` for the first clone. Do not use a production-only install: `tsx` (worker and sweep) and `dbmate` (migrations) are dev dependencies installed by the deployment script.
 
-There is no public, unauthenticated health endpoint. Deployment checks `GET http://127.0.0.1:3100/khlaas/`; `/khlaas/api/admin/health` is an authenticated admin endpoint, not a load-balancer health check.
+There is no public, unauthenticated health endpoint. Deployment checks `GET http://localhost:3100/khlaas/`; `/khlaas/api/admin/health` is an authenticated admin endpoint, not a load-balancer health check.
 
 ## First install
 
@@ -37,7 +37,7 @@ Useful checks:
 systemctl status khlaas-web khlaas-worker
 journalctl -u khlaas-web -u khlaas-worker -n 100 --no-pager
 systemctl list-timers khlaas-sweep.timer khlaas-backup.timer
-curl -i http://127.0.0.1:3100/khlaas/
+curl -i http://localhost:3100/khlaas/
 ```
 
 ## Rollback

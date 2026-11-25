@@ -23,14 +23,23 @@ boss.on("error", (err: unknown) => console.error("pg-boss error", err));
 const pool = new Pool({ connectionString: url, max: 2 });
 pool.on("error", (err) => console.error("pg pool error", err));
 
-await boss.start();
-await registerJobs(boss, drizzle(pool));
-console.log("khlaas worker running");
-
 async function shutdown() {
   await boss.stop({ graceful: true });
   await pool.end();
   process.exit(0);
 }
-process.on("SIGTERM", shutdown);
-process.on("SIGINT", shutdown);
+
+// No top-level await: the package is CommonJS, so tsx compiles this file as
+// CJS and rejects top-level await.
+async function main() {
+  await boss.start();
+  await registerJobs(boss, drizzle(pool));
+  console.log("khlaas worker running");
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
+}
+
+main().catch((err) => {
+  console.error("khlaas worker failed to start", err);
+  process.exit(1);
+});
