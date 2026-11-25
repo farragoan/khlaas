@@ -76,7 +76,9 @@ if $FIRST_RUN; then
   as_root systemctl enable khlaas-web.service khlaas-worker.service khlaas-sweep.timer khlaas-backup.timer
 fi
 
-if [[ ! -f "$ENV_FILE" ]]; then
+# Test as root: /etc/khlaas is root:khlaas 0750, so the invoking user may not
+# be able to see the file and would wrongly overwrite it with the example.
+if ! as_root test -f "$ENV_FILE"; then
   as_root install -o root -g "$APP_USER" -m 0640 "$APP_DIR/deploy/khlaas.env.example" "$ENV_FILE"
   echo "Created $ENV_FILE from the example. Replace placeholders, then rerun this deploy." >&2
   exit 1
