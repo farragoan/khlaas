@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "khlaas-edge",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-25",
+  "workers_dev": false,
+  "routes": [
+    { "pattern": "dhruvnagpal.in/khlaas*", "zone_name": "dhruvnagpal.in" },
+    { "pattern": "khlaas.dhruvnagpal.in/*", "zone_name": "dhruvnagpal.in" }
+  ],
+  "vpc_services": [
+    {
+      "binding": "KHLAAS",
+      "service_id": "01a213b1-fe52-7b41-abba-37734fc7ab9c"
+    }
+  ],
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true },
+    "traces": { "enabled": true, "head_sampling_rate": 0.01 }
+  }
+}

@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 
-// Driver-agnostic: neon-http (prod), node-postgres (worker) and PGlite (tests).
+// Driver-agnostic: node-postgres (app/worker) and PGlite (tests).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyPgDb = PgDatabase<PgQueryResultHKT, any>;
 
@@ -20,8 +20,8 @@ export interface SettleEntry {
  * blocks until the first commits and then re-checks the predicate and claims
  * nothing), and the ledger rows are inserted FROM the claimed row. A single SQL
  * statement is one implicit transaction, so status and ledger can never
- * diverge — which is what we need because neon-http has no interactive
- * transactions (`db.transaction` throws there).
+ * diverge. Keeping this atomic also avoids holding a pool client across
+ * separate queries.
  *
  * Returns false when this call did not settle the bill (already settled, expired
  * or missing); the caller turns that into a 409 without having written anything.

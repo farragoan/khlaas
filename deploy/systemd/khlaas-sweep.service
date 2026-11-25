@@ -1,14 +1,17 @@
 [Unit]
 Description=khlaas housekeeping sweep (expire tables, revoke stale sessions)
-After=network-online.target
+After=network-online.target docker.service
+Wants=network-online.target docker.service
 
 [Service]
 Type=oneshot
-WorkingDirectory=/opt/khlaas
-# DATABASE_URL via systemd-creds: systemd-creds encrypt --name=database-url - database-url.cred
-LoadCredentialEncrypted=database-url:/etc/khlaas/database-url.cred
-ExecStart=/bin/sh -c 'DATABASE_URL="$(cat "$CREDENTIALS_DIRECTORY/database-url")" exec /usr/bin/pnpm sweep'
 User=khlaas
+Group=khlaas
+WorkingDirectory=/opt/khlaas
+Environment=NODE_ENV=production
+Environment=PATH=/opt/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=/etc/khlaas/khlaas.env
+ExecStart=/opt/node/bin/node /opt/khlaas/node_modules/tsx/dist/cli.mjs /opt/khlaas/scripts/sweep.ts
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes

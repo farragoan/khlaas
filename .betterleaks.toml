@@ -4,4 +4,4 @@ useDefault = true
 
 [[allowlists]]
 description = "CI test database placeholder credentials"
-paths = ['''^\.github/workflows/ci\.yml$''']
+paths = ['''^\.github/workflows/ci\.yml$''', '''^deploy/khlaas\.env\.example$''']

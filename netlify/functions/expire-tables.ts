@@ -1,6 +1,5 @@
 import type { Config } from "@netlify/functions";
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { getDb } from "../../lib/db/client";
 import { expireStaleSessions, expireTables } from "../../lib/jobs/sweeps";
 
 // Platform cron for the Netlify deployment. The sweeps themselves live in
@@ -10,7 +9,7 @@ export default async function handler() {
   const url = process.env.DATABASE_URL;
   if (!url) return { statusCode: 500, body: "DATABASE_URL not set" };
 
-  const db = drizzle(neon(url));
+  const db = getDb();
   const expired = await expireTables(db);
   const revoked = await expireStaleSessions(db);
 

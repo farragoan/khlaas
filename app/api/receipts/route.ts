@@ -267,10 +267,13 @@ export async function POST(req: Request) {
     // One atomic batch: items and the status flip land together or not at all,
     // so a failure between them cannot leave items on a still-active bill that
     // a re-scan would then duplicate.
-    await db.batch([
-      db.insert(items).values(itemRows),
-      db.update(splitTables).set({ status: "items_ready", rawOcr: null }).where(eq(splitTables.id, tableId)),
-    ]);
+    await db.transaction(async (tx) => {
+      await tx.insert(items).values(itemRows);
+      await tx
+        .update(splitTables)
+        .set({ status: "items_ready", rawOcr: null })
+        .where(eq(splitTables.id, tableId));
+    });
   } catch (err) {
     await reportError(err, { operation: "persist OCR items", tableId, itemCount: itemRows.length });
     await releaseClaim();
