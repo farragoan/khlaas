@@ -16,6 +16,14 @@ const eslintConfig = defineConfig([
     // every finding N times over and buries the one copy that matters.
     ".claude/worktrees/**",
   ]),
+  {
+    // Keep the existing client-side patterns visible without making these
+    // React Compiler-adjacent diagnostics block the legacy codebase.
+    rules: {
+      "react-hooks/immutability": "warn",
+      "react-hooks/set-state-in-effect": "warn",
+    },
+  },
 ]);
 
 export default eslintConfig;

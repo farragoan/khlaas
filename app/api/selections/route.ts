@@ -114,10 +114,9 @@ async function getOwnQuantity(participantId: string, itemId: string): Promise<nu
  * statement so the capacity check and the write cannot be separated by another
  * request's write. Returns false when it does not fit.
  *
- * neon-http has no interactive transactions, and READ COMMITTED lets two
- * concurrent statements both pass the check, so callers also run
- * `settleRace` afterwards. A DB trigger would close it fully; the SQL is in
- * docs/migrations-pending.md.
+ * READ COMMITTED lets two concurrent statements both pass a separate check,
+ * so callers also run `settleRace` afterwards. A DB trigger would close the
+ * race fully; the SQL is in docs/migrations-pending.md.
  */
 async function guardedUpsert(participantId: string, itemId: string, quantity: number): Promise<boolean> {
   const result = await db.execute(sql`
