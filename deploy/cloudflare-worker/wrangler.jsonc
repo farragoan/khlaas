@@ -5,7 +5,8 @@
   "compatibility_date": "2026-11-25",
   "workers_dev": false,
   "routes": [
-    { "pattern": "dhruvnagpal.in/khlaas*", "zone_name": "dhruvnagpal.in" }
+    { "pattern": "dhruvnagpal.in/khlaas*", "zone_name": "dhruvnagpal.in" },
+    { "pattern": "khlaas.dhruvnagpal.in/*", "zone_name": "dhruvnagpal.in" }
   ],
   "vpc_services": [
     {

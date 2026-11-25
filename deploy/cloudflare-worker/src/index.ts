@@ -1,5 +1,7 @@
 const PUBLIC_HOST = "dhruvnagpal.in";
 const APP_PATH = "/khlaas";
+// The retired Netlify site's hostname; old links now redirect to the app path.
+const LEGACY_HOST = "khlaas.dhruvnagpal.in";
 
 export interface FetchBinding {
   fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
@@ -7,6 +9,13 @@ export interface FetchBinding {
 
 export function isKhlaasPath(pathname: string): boolean {
   return pathname === APP_PATH || pathname.startsWith(`${APP_PATH}/`);
+}
+
+export function legacyRedirect(request: Request): Response | undefined {
+  const url = new URL(request.url);
+  if (url.hostname !== LEGACY_HOST) return undefined;
+  const path = isKhlaasPath(url.pathname) ? url.pathname : `${APP_PATH}${url.pathname}`;
+  return Response.redirect(`https://${PUBLIC_HOST}${path}${url.search}`, 301);
 }
 
 export function buildUpstreamRequest(request: Request): Request {
@@ -62,6 +71,9 @@ export async function handleRequest(
   binding: FetchBinding,
   originFetch: typeof fetch = fetch,
 ): Promise<Response> {
+  const redirect = legacyRedirect(request);
+  if (redirect) return redirect;
+
   if (!isKhlaasPath(new URL(request.url).pathname)) {
     return originFetch(request);
   }

@@ -111,3 +111,20 @@ describe("unavailableResponse", () => {
     await expect(response.text()).resolves.toContain("temporarily unavailable");
   });
 });
+
+describe("legacy host redirect", () => {
+  it("sends khlaas.dhruvnagpal.in links to dhruvnagpal.in/khlaas", async () => {
+    const binding = bindingWith(async () => new Response("unused"));
+    const cases: Array<[string, string]> = [
+      ["https://khlaas.dhruvnagpal.in/", "https://dhruvnagpal.in/khlaas/"],
+      ["https://khlaas.dhruvnagpal.in/t/abc?x=1", "https://dhruvnagpal.in/khlaas/t/abc?x=1"],
+      ["https://khlaas.dhruvnagpal.in/khlaas/history", "https://dhruvnagpal.in/khlaas/history"],
+    ];
+    for (const [from, to] of cases) {
+      const response = await handleRequest(new Request(from), binding);
+      expect(response.status).toBe(301);
+      expect(response.headers.get("Location")).toBe(to);
+    }
+    expect(binding.fetch).not.toHaveBeenCalled();
+  });
+});
